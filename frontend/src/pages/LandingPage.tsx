@@ -11,10 +11,10 @@ const LandingPage = () => {
           <LucideSearchCode className="hidden group-hover:block mr-2 transition-all" />
         </Button>
         <div className="font-bold text-7xl text-center mt-10">
-          <h1 className="">Detect <span className="bg-linear-to-r from-purple-500 to-blue-100 bg-clip-text text-transparent">
+          <h1 className="">Detect <span className="bg-linear-to-r from-purple-500 to-blue-100 bg-clip-text text-transparent hover:drop-shadow-[0_0_3px_rgba(60,130,240,0.8)]">
             Deepfake
           </span> Content</h1>
-          <h1 className="mt-10">with <span className="bg-linear-to-r from-blue-500 to-slate-100 bg-clip-text text-transparent">
+          <h1 className="mt-10">with <span className="bg-linear-to-r from-blue-500 to-slate-100 bg-clip-text text-transparent hover:drop-shadow-[0_0_3px_rgba(60,130,240,0.8)]">
             Precision
           </span></h1>
         </div>
@@ -24,13 +24,13 @@ const LandingPage = () => {
             Get instant verification ⚡️.
           </p>
           <p className="mt-2">
-            Let <span className="bg-linear-to-r from-blue-400 to-sky-100 bg-clip-text text-transparent">
-              AI-powered analysis
+            Let <span className="bg-linear-to-r from-blue-500 to-white bg-clip-text text-transparent">
+              <b>AI-powered analysis</b>
             </span> catches what the eye can't 🚩.
           </p>
           <p className="mt-2">
             Completely <span className="bg-linear-to-r from-white to-amber-400 bg-clip-text text-transparent">
-              for free ✨!
+              <b>for free</b> ✨!
             </span>
           </p>
         </div>
