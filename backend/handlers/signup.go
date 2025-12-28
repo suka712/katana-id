@@ -30,6 +30,10 @@ type SignupResponse struct {
 	Message  string `json:"message"`
 }
 
+type ErrorRespnse struct {
+	Error string `json:"error"`
+}
+
 // Signup handles POST /signup requests
 func Signup(w http.ResponseWriter, r *http.Request) {
 	var req SignupRequest
