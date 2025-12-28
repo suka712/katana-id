@@ -18,7 +18,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Signup handles POST /signup requests
+// ---------------------------Signup---------------------------
 func Signup(w http.ResponseWriter, r *http.Request) {
 	var req SignupRequest
 
@@ -124,6 +124,81 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// ---------------------------Login---------------------------
+func Login(w http.ResponseWriter, r *http.Request) {
+	var req LoginRequest
+
+	// Decode JSON body
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		log.Print("Error decoding JSON:", err)
+		writeJSON(w, http.StatusBadRequest, ErrorResponse{Error: "Something went wrong"})
+		return
+	}
+
+	email := strings.ToLower(strings.TrimSpace(req.Email))
+	password := req.Password
+
+	// Validate input
+	if email == "" || password == "" {
+		log.Print("Request has empty field")
+		writeJSON(w, http.StatusBadRequest, ErrorResponse{Error: "Email and password required"})
+		return
+	}
+
+	// Find user by email
+	var user User
+	err = database.DB.QueryRow(
+		context.Background(),
+		"SELECT id, username, email, password_hash FROM users WHERE email = $1",
+		strings.ToLower(req.Email),
+	).Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash)
+
+	if err != nil {
+		log.Print("Incorrect username or password")
+		writeJSON(w, http.StatusBadRequest, ErrorResponse{Error: "Incorrect username or password"})
+		return
+	}
+
+	// Compare password with hash
+	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password))
+	if err != nil {
+		log.Print("Incorrect username or password")
+		writeJSON(w, http.StatusBadRequest, ErrorResponse{Error: "Incorrect username or password"})
+		return
+	}
+
+	// Generate JWT token
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id":  user.ID,
+		"username": user.Username,
+		"email":    user.Email,
+		"iat":      time.Now().Unix(),
+		"exp":      time.Now().Add(time.Hour * 24).Unix(),
+	})
+
+	// Sign the token with secret
+	jwtSecret := os.Getenv("JWT_SECRET")
+	tokenString, err := token.SignedString([]byte(jwtSecret))
+	if err != nil {
+		http.Error(w, `{"error": "Failed to generate token"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// Log successful login
+	log.Printf("User logged in: %s (%s)", user.Username, user.Email)
+
+	// Success response
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(SuccessResponse{
+		Token:    tokenString,
+		Username: user.Username,
+		Email:    user.Email,
+		Message:  "Login successful",
+	})
+}
+
+// ---------------------------Helpers---------------------------
 var emailRegex = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
 func isValidEmail(email string) bool {
 	return emailRegex.MatchString(email)
