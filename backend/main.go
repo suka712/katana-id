@@ -74,6 +74,9 @@ func main() {
 	// Analyze endpoint
 	r.Post("/api/analyze", handlers.Analyze)
 
+	// History endpoint
+	r.Get("/api/history", handlers.History)
+
 	// Start server
 	fmt.Println("Server is running on port 8080")
 	http.ListenAndServe(":8080", r)
