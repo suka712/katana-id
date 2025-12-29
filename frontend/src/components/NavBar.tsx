@@ -1,6 +1,5 @@
 import { Button } from "./ui/button";
 import { ArrowRight, LucideCodeXml } from "lucide-react";
-import logo from "/logo.svg";
 import {
   HoverCard,
   HoverCardContent,
@@ -8,22 +7,20 @@ import {
 } from "@radix-ui/react-hover-card";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/useAuthStore";
+import Logo from "./Logo";
 
 const NavBar = () => {
   const navigate = useNavigate();
   const { token, logout } = useAuthStore();
 
   return (
-    <nav className="sticky top-0 w-full border-b-2 bg-background">
+    <nav className="sticky top-0 w-full border-b-2 bg-background h-15">
       <div className="mx-auto max-w-6xl flex items-center p-3">
         <div
           className="flex flex-1 items-center gap-3"
           onClick={() => navigate("/")}
         >
-          <img
-            src={logo}
-            className="h-8 hover:drop-shadow-[0_0_5px_rgba(60,130,240,1)] transition-all"
-          />
+          <Logo/>
           <p className="text-xl hover:drop-shadow-[0_0_10px_rgba(60,130,240,1)] transition-all">
             KatanaID
           </p>
