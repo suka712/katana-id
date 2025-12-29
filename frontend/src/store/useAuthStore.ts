@@ -52,7 +52,7 @@ export const useAuthStore = create<AuthStore>()(
               email: res.data.email,
             },
           });
-          // TODO: success message
+          toast.success("Logged in successfully.");
         } catch (error: unknown) {
           if (error instanceof AxiosError) {
             console.log("Axios error:", error.response?.data.error);
