@@ -95,18 +95,8 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate JWT token
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id":  userID,
-		"username": username,
-		"email":    email,
-		"iat":      time.Now().Unix(),
-		"exp":      time.Now().Add(time.Hour * 24).Unix(),
-	})
-
-	// Sign the token with secret
-	jwtSecret := os.Getenv("JWT_SECRET")
-	tokenString, err := token.SignedString([]byte(jwtSecret))
+	// Generating token
+	tokenString, err := generateSignedToken(userID, username, email)
 	if err != nil {
 		log.Print("Error signing token with secret:", err)
 		writeJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "Something went wrong"})
@@ -137,7 +127,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	email := strings.ToLower(strings.TrimSpace(req.Email))
-	password := req.Password
+	password := strings.TrimSpace(req.Password)
 
 	// Validate input
 	if email == "" || password == "" {
@@ -168,25 +158,15 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate JWT token
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id":  user.ID,
-		"username": user.Username,
-		"email":    user.Email,
-		"iat":      time.Now().Unix(),
-		"exp":      time.Now().Add(time.Hour * 24).Unix(),
-	})
-
-	// Sign the token with secret
-	jwtSecret := os.Getenv("JWT_SECRET")
-	tokenString, err := token.SignedString([]byte(jwtSecret))
+	tokenString, err := generateSignedToken(user.ID, user.Username, user.Email)
 	if err != nil {
-		http.Error(w, `{"error": "Failed to generate token"}`, http.StatusInternalServerError)
+		log.Print("Error signing token with secret:", err)
+		writeJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "Something went wrong"})
 		return
 	}
 
 	// Log successful login
-	log.Printf("User logged in: %s (%s)", user.Username, user.Email)
+	log.Printf("User logged in: %s - %s", user.Username, user.Email)
 
 	// Success response
 	w.Header().Set("Content-Type", "application/json")
@@ -199,6 +179,17 @@ func Login(w http.ResponseWriter, r *http.Request) {
 }
 
 // ---------------------------Helpers---------------------------
+func generateSignedToken(userID int, username, email string) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id":  userID,
+		"username": username,
+		"email":    email,
+		"iat":      time.Now().Unix(),
+		"exp":      time.Now().Add(time.Hour * 24).Unix(),
+	})
+	return token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+}
+
 var emailRegex = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
 
 func isValidEmail(email string) bool {
