@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 )
@@ -15,10 +14,9 @@ type HealthResponse struct {
 // Health handlers to GET /health
 func Health(w http.ResponseWriter, r *http.Request) {
 	response := HealthResponse{
-		Status:    "ok",
+		Status:    "healthy",
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	writeJSON(w, http.StatusOK, response)
 }
