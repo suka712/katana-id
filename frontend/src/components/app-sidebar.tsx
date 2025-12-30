@@ -158,7 +158,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <div className="flex items-center gap-3 h-10" onClick={() => toggleSidebar()}>
-                <Logo /> {state === "expanded" && <span>KatanaID</span>}
+                <Logo />
+                 {state === "expanded" && <span>KatanaID</span>}
             </div>
           </SidebarMenuItem>
         </SidebarMenu>
