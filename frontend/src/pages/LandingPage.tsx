@@ -30,7 +30,7 @@ const LandingPage = () => {
           </span>{" "}
           Your Platform{" "}
           <span className="bg-linear-to-r from-purple-500 to-pink-300 bg-clip-text text-transparent drop-shadow-[0_0_5px_rgba(190,10,190,1)] ">
-            Wants
+            Needs
           </span>
         </h1>
         <div className="text-center mt-6 text-accent-foreground">
@@ -101,11 +101,11 @@ const LandingPage = () => {
           </div>
         </div>
         {/* Fade overlay */}
-        <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-linear-to-t from-background from-30% via-background/50 to-transparent pointer-events-none" />
+        <div className="absolute bottom-10 left-0 right-0 h-1/3 bg-linear-to-t from-background from-30% via-background/50 to-transparent pointer-events-none rounded-2xl" />
       </div>
 
       {/* Features section */}
-      <MaxWidthWrapper className="relative pt-25 z-10">
+      <MaxWidthWrapper className="mt-10 relative pt-25 z-10">
         <AnimationContainer delay={0.1}>
           <div className="flex flex-col w-full items-center lg:items-center justify-center py-8">
             <MagicBadge title="Features" />
@@ -130,14 +130,15 @@ const LandingPage = () => {
         </AnimationContainer>
       </MaxWidthWrapper>
 
-      <MaxWidthWrapper className="max-w-[100vw] overflow-x-hidden scrollbar-hide">
+      {/* CTA section */}
+      <MaxWidthWrapper className="mt-40 max-w-[100vw] overflow-x-hidden scrollbar-hide">
         <AnimationContainer delay={0.1}>
           <LampContainer>
             <div className="flex flex-col items-center justify-center relative w-full text-center max-w-3xl">
               <h2 className="bg-linear-to-b from-neutral-200 to-neutral-400 py-4 bg-clip-text text-center text-4xl md:text-7xl leading-[1.15]! font-medium font-heading tracking-tight text-transparent mt-8">
                 Start protecting your platform today
               </h2>
-              <p className="text-accent-foreground mt-6 max-w-md mx-auto">
+              <p className="text-accent-foreground mt-4 max-w-md mx-auto">
                 Integrate in minutes - for free. One API call to verify images,
                 detect bots, and catch AI-generated content before it hits your
                 platform.
