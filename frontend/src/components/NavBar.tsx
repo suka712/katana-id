@@ -20,10 +20,10 @@ const NavBar = () => {
 
   return (
     <nav className="sticky top-0 z-50 w-full h-full border-b border-border/40 bg-background/10 backdrop-blur-md py-1.5 px-4">
-      <div className="mx-auto max-w-6xl flex items-center justify-between">
+      <div className="mx-auto max-w-6xl flex items-center">
         {/* Logo */}
         <div
-          className="flex items-center gap-3 cursor-pointer"
+          className="flex-1 flex items-center gap-3 cursor-pointer"
           onClick={() => navigate("/")}
         >
           <Logo />
@@ -33,7 +33,7 @@ const NavBar = () => {
         </div>
 
         {/* Desktop nav - hidden on mobile */}
-        <div className="hidden md:flex items-center justify-center gap-3">
+        <div className="flex-1 hidden md:flex items-center justify-center gap-3">
           <HoverCard openDelay={200} closeDelay={400}>
             <HoverCardTrigger>
               <Button variant="ghost">Developers</Button>
@@ -60,7 +60,7 @@ const NavBar = () => {
         </div>
 
         {/* Desktop right section - hidden on mobile */}
-        <div className="hidden md:flex items-center justify-end gap-3">
+        <div className="flex-1 hidden md:flex items-center justify-end gap-3">
           {token === null ? (
             <Button variant="ghost" onClick={() => navigate("/signup")}>
               Sign in
