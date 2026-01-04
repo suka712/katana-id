@@ -82,7 +82,7 @@ func main() {
 	})
 
 	// Contact endpoint
-	r.Post("/api/contact", handlers.Contact)
+	r.With(middleware.ContactRateLimiter()).Post("/api/contact", handlers.Contact)
 
 	// OAuth endpoints
 	r.Get("/auth/google", handlers.GoogleLogin)
