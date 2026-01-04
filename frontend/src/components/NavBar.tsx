@@ -8,6 +8,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/useAuthStore";
 import Logo from "./Logo";
+import { ContactDialog } from "./ContactDialog";
 import {
   Sheet,
   SheetContent,
@@ -70,7 +71,9 @@ const NavBar = () => {
             </HoverCardContent>
           </HoverCard>
           <Button variant="ghost">Demo</Button>
-          <Button variant="ghost">Contact</Button>
+          <ContactDialog>
+            <Button variant="ghost">Contact</Button>
+          </ContactDialog>
         </div>
 
         {/* Desktop right section - hidden on mobile */}
@@ -108,9 +111,11 @@ const NavBar = () => {
                 <Button variant="ghost" className="justify-start">
                   Demo
                 </Button>
-                <Button variant="ghost" className="justify-start">
-                  Contact
-                </Button>
+                <ContactDialog>
+                  <Button variant="ghost" className="justify-start">
+                    Contact
+                  </Button>
+                </ContactDialog>
                 <div className="flex flex-col gap-1 pt-4 border-t border-border/50">
                   <a
                     href="https://github.com/suka712"

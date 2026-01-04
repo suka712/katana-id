@@ -19,3 +19,16 @@ func AuthRateLimiter() func(http.Handler) http.Handler {
 		}),
 	)
 }
+
+func ContactRateLimiter() func(http.Handler) http.Handler {
+	return httprate.Limit(
+		3,
+		1*time.Hour,
+		httprate.WithKeyFuncs(httprate.KeyByIP),
+		httprate.WithLimitHandler(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusTooManyRequests)
+			w.Write([]byte(`{"error": "Too many requests. Please try again later."}`))
+		}),
+	)
+}
