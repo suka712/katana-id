@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +26,9 @@ export function ContactDialog({ children }: ContactDialogProps) {
   const [reason, setReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const lastSubmittedRef = useRef({ email: "", reason: "" });
+  const [isDebouncing, setIsDebouncing] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -39,6 +42,22 @@ export function ContactDialog({ children }: ContactDialogProps) {
       toast.error("Please provide more details (at least 10 characters)");
       return;
     }
+
+    // Check if values changed since last submission
+    const hasChanged =
+      email !== lastSubmittedRef.current.email ||
+      reason !== lastSubmittedRef.current.reason;
+
+    if (!hasChanged || isDebouncing) {
+      return; // Block submission
+    }
+
+    // Save current values as last submitted
+    lastSubmittedRef.current = { email, reason };
+
+    // Start 3-second debounce
+    setIsDebouncing(true);
+    setTimeout(() => setIsDebouncing(false), 3000);
 
     setIsSubmitting(true);
 
@@ -101,7 +120,7 @@ export function ContactDialog({ children }: ContactDialogProps) {
             </span>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || isDebouncing}>
               {isSubmitting ? (
                 <LucideLoader2 className="animate-spin" />
               ) : (
