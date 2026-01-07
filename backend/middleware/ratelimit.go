@@ -7,23 +7,23 @@ import (
 	"github.com/go-chi/httprate"
 )
 
-func AuthRateLimiter() func(http.Handler) http.Handler {
+func RateLimiterPerHour(limitPerHour int) func(http.Handler) http.Handler {
 	return httprate.Limit(
-		5,
-		1*time.Minute,
+		limitPerHour,
+		1*time.Hour,
 		httprate.WithKeyFuncs(httprate.KeyByIP),
 		httprate.WithLimitHandler(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusTooManyRequests)
-			w.Write([]byte(`{"error": "Too many failed attempts. Please try again later."}`))
+			w.Write([]byte(`{"error": "Too many requests. Please try again later."}`))
 		}),
 	)
 }
 
-func ContactRateLimiter() func(http.Handler) http.Handler {
+func RateLimiterPerMinute(limitPerMinute int) func(http.Handler) http.Handler {
 	return httprate.Limit(
-		3,
-		1*time.Hour,
+		limitPerMinute,
+		1*time.Minute,
 		httprate.WithKeyFuncs(httprate.KeyByIP),
 		httprate.WithLimitHandler(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")

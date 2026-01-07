@@ -93,18 +93,23 @@ func main() {
 	r.Get("/health", handlers.Health)
 
 	r.Route("/auth", func(r chi.Router) {
-		r.Use(middleware.AuthRateLimiter())
+		r.Use(middleware.RateLimiterPerMinute(12))
 		r.Post("/signup", handlers.Signup)
 		r.Post("/login", handlers.Login)
 		r.Get("/verify-email", handlers.VerifyEmail)
 	})
 
-	r.With(middleware.ContactRateLimiter()).Post("/api/contact", handlers.Contact)
-
+	r.With(middleware.RateLimiterPerHour(3)).Post("/api/contact", handlers.Contact)
+	
 	r.Get("/auth/google", handlers.GoogleLogin)
 	r.Get("/auth/google/callback", handlers.GoogleCallback)
 	r.Get("/auth/github", handlers.GitHubLogin)
 	r.Get("/auth/github/callback", handlers.GitHubCallback)
+	
+	r.Route("/api", func(r chi.Router) {
+		r.Use(middleware.RateLimiterPerHour(3))
+		r.Post("/identity/username", handlers.GenerateUsername)
+	})
 
 	port := os.Getenv("PORT")
 	fmt.Println("Server is starting on port", port)
