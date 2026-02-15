@@ -82,11 +82,11 @@ export const useAuthStore = create<AuthStore>()(
             if (error.response?.status === 429) {
               toast.error("Too many failed attempts. Please try again later.");
             } else {
-              console.log("Axios error:", error.response?.data.error);
+
               toast.error("Error signing up: " + error.response?.data.error);
             }
           } else {
-            console.log("Unknown error:", error);
+
             toast.error("Error creating account: " + error);
           }
         } finally {
@@ -112,11 +112,11 @@ export const useAuthStore = create<AuthStore>()(
             if (error.response?.status === 429) {
               toast.error("Too many failed attempts. Please try again later.");
             } else {
-              console.log("Axios error:", error.response?.data.error);
+
               toast.error("Error logging in: " + error.response?.data.error);
             }
           } else {
-            console.log("Unknown error:", error);
+
             toast.error("Error logging in: " + error);
           }
         } finally {

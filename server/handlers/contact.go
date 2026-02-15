@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"regexp"
 	"strings"
 
 	"katanaid/database"
@@ -21,8 +20,6 @@ type ContactRequest struct {
 type ContactResponse struct {
 	Message string `json:"message"`
 }
-
-var contactEmailRegex = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
 
 func Contact(w http.ResponseWriter, r *http.Request) {
 	var req ContactRequest
@@ -43,7 +40,7 @@ func Contact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !contactEmailRegex.MatchString(email) {
+	if !util.IsValidEmail(email) {
 		log.Print("Invalid email format")
 		util.WriteJSON(w, http.StatusBadRequest, models.ErrorResponse{Error: "Invalid email format"})
 		return

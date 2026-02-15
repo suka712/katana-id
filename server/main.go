@@ -109,6 +109,7 @@ func main() {
 	r.Get("/auth/github/callback", handlers.GitHubCallback)
 
 	r.Route("/api", func(r chi.Router) {
+		r.Use(middleware.AuthMiddleware)
 		r.Use(middleware.RateLimiterPerHour(3))
 		r.Post("/identity/username", identityservice.GenerateUsername)
 		r.Post("/identity/avatar", identityservice.GenerateAvatar)

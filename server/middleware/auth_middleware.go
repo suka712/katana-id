@@ -60,10 +60,32 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
+		userIDFloat, ok := claims["user_id"].(float64)
+		if !ok {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte(`{"error": "Invalid token claims"}`))
+			return
+		}
+		username, ok := claims["username"].(string)
+		if !ok {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte(`{"error": "Invalid token claims"}`))
+			return
+		}
+		email, ok := claims["email"].(string)
+		if !ok {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte(`{"error": "Invalid token claims"}`))
+			return
+		}
+
 		user := UserClaims{
-			UserID:   int(claims["user_id"].(float64)),
-			Username: claims["username"].(string),
-			Email:    claims["email"].(string),
+			UserID:   int(userIDFloat),
+			Username: username,
+			Email:    email,
 		}
 
 		ctx := context.WithValue(r.Context(), UserContextKey, user)

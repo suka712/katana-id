@@ -9,10 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	mrand "math/rand"
 	"net/http"
 	"os"
-	"regexp"
 	"strings"
 	"time"
 
@@ -58,7 +56,7 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !isValidEmail(email) {
+	if !util.IsValidEmail(email) {
 		log.Print("Invalid email format")
 		util.WriteJSON(w, http.StatusBadRequest, models.ErrorResponse{Error: "Invalid email"})
 		return
@@ -271,11 +269,6 @@ func generateSignedToken(userID int, username, email string, emailVerified bool)
 	return token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 }
 
-var emailRegex = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
-
-func isValidEmail(email string) bool {
-	return emailRegex.MatchString(email)
-}
 
 func generateEmailVerificationToken() (raw string, hashed string, err error) {
 	b := make([]byte, 64)
@@ -345,8 +338,6 @@ func sendVerificationEmail(token string, email string, username string) error {
 	client := resend.NewClient(os.Getenv("RESEND_API_KEY"))
 
 	link := fmt.Sprintf("%s/auth/verify-email?token=%s", os.Getenv("BACKEND_URL"), token)
-	names := []string{"Anh", "Khiem"}
-	name := names[mrand.Intn(len(names))]
 
 	params := &resend.SendEmailRequest{
 		From:    "KatanaID <noreply@katanaid.com>",
@@ -355,9 +346,10 @@ func sendVerificationEmail(token string, email string, username string) error {
 		Html: fmt.Sprintf(`
 		<p>Hello, %s</p>
 		<br>
-		<p>This is %s from KatanaID</p>
-		<p>Click the link below to verify your email</p>
-		<a href="%s">Verify Email</a>`, username, name, link),
+		<p>Click the link below to verify your email.</p>
+		<a href="%s">Verify Email</a>
+		<br>
+		<p>— The Katana ID Team</p>`, username, link),
 	}
 
 	_, err := client.Emails.Send(params)

@@ -30,7 +30,8 @@ var (
 	jwtSecret         []byte
 )
 
-// In-memory state store (use Redis/DB in production)
+// TODO: Replace with Redis or DB-backed store for multi-instance deployments.
+// In-memory state store — works for single-instance but not horizontally scalable.
 var (
 	oauthStates = make(map[string]time.Time)
 	statesMutex sync.RWMutex

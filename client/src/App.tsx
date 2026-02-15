@@ -4,14 +4,11 @@ import { Toaster } from "sonner";
 import LandingPage from "./pages/public-pages/LandingPage";
 import LoginPage from "./pages/public-pages/LoginPage";
 import SignupPage from "./pages/public-pages/SignupPage";
-import DashboardPage from "./pages/service-pages/Dashboard";
 import GenerativeIdentityPage from "./pages/service-pages/GenerativeIdentityPage";
-import TrafficAnalyticsPage from "./pages/service-pages/TrafficAnalyticsPage";
 import TokenCallbackPage from "./pages/public-pages/AuthCallbackPage";
 import GridBackground from "./components/GridBackground";
 import DashboardLayout from "./components/layouts/DashboardLayout";
 import RequireVerified from "./components/RequireVerified";
-import EmailServicePage from "./pages/service-pages/EmailServicePage";
 
 const PublicLayout = () => (
   <>
@@ -40,28 +37,11 @@ function App() {
         <Route path="/auth/callback" element={<TokenCallbackPage />} />
         <Route path="/auth/verified" element={<TokenCallbackPage />} />
         <Route path="/dashboard" element={<DashboardLayout />}>
-          <Route index element={<DashboardPage />} />
           <Route
-            path="generative-identity"
+            index
             element={
               <RequireVerified>
                 <GenerativeIdentityPage />
-              </RequireVerified>
-            }
-          />
-          <Route
-            path="traffic-analytics"
-            element={
-              <RequireVerified>
-                <TrafficAnalyticsPage />
-              </RequireVerified>
-            }
-          />
-          <Route
-            path="email-service"
-            element={
-              <RequireVerified>
-                <EmailServicePage />
               </RequireVerified>
             }
           />

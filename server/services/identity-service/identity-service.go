@@ -52,8 +52,12 @@ func GenerateUsername(w http.ResponseWriter, r *http.Request) {
 	}
 
 	vibe := strings.ToLower(strings.TrimSpace(req.Vibe))
-	if vibe == "" || len(vibe) > 15 {
-		log.Print("Invalid vibe")
+	allowedVibes := map[string]bool{
+		"random": true, "professional": true, "creative": true,
+		"techy": true, "elegant": true, "quirky": true,
+	}
+	if !allowedVibes[vibe] {
+		log.Print("Invalid vibe:", vibe)
 		util.WriteJSON(w, http.StatusBadRequest, models.ErrorResponse{Error: "Invalid request"})
 		return
 	}

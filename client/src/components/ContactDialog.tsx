@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
+import { useFormDebounce } from "@/hooks/use-form-debounce";
 import {
   Dialog,
   DialogContent,
@@ -26,13 +27,11 @@ export function ContactDialog({ children }: ContactDialogProps) {
   const [reason, setReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const lastSubmittedRef = useRef({ email: "", reason: "" });
-  const [isDebouncing, setIsDebouncing] = useState(false);
+  const { isDebouncing, shouldSubmit } = useFormDebounce({ email: "", reason: "" });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Basic validation
     if (!email || !reason) {
       toast.error("Please fill in all fields");
       return;
@@ -43,21 +42,7 @@ export function ContactDialog({ children }: ContactDialogProps) {
       return;
     }
 
-    // Check if values changed since last submission
-    const hasChanged =
-      email !== lastSubmittedRef.current.email ||
-      reason !== lastSubmittedRef.current.reason;
-
-    if (!hasChanged || isDebouncing) {
-      return; // Block submission
-    }
-
-    // Save current values as last submitted
-    lastSubmittedRef.current = { email, reason };
-
-    // Start 3-second debounce
-    setIsDebouncing(true);
-    setTimeout(() => setIsDebouncing(false), 3000);
+    if (!shouldSubmit({ email, reason })) return;
 
     setIsSubmitting(true);
 

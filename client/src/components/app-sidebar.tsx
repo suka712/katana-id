@@ -1,10 +1,8 @@
 import * as React from "react";
 import {
   IconBook,
-  IconChartBar,
   IconFingerprint,
   IconSettings,
-  IconMailCode
 } from "@tabler/icons-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
@@ -35,19 +33,9 @@ const data = {
   services: [
     {
       title: "Generative Identity",
-      url: "/dashboard/generative-identity",
+      url: "/dashboard",
       icon: IconFingerprint,
     },
-    {
-      title: "Traffic Analytics",
-      url: "/dashboard/traffic-analytics",
-      icon: IconChartBar,
-    },
-    {
-      title: "Email Service",
-      url: "/dashboard/email-service",
-      icon: IconMailCode,
-    }
   ],
   navSecondary: [
     {
