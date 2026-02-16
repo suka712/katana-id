@@ -8,10 +8,13 @@ import { Button } from "@/components/ui/button";
 import MagicBadge from "@/components/ui/magic-badge";
 import { LampContainer } from "@/components/ui/lamp";
 import Footer from "@/components/Footer";
+import NavBar from "@/components/NavBar";
 
 const LandingPage = () => {
   return (
     <>
+      {/* ----------------------------------NavBar---------------------------------- */}
+      <NavBar />
       {/* ----------------------------------Hero Section---------------------------------- */}
       <div className="relative z-10 flex flex-col justify-center pt-10 md:pt-20 items-center">
         <MagicBadge title="AI Authentication Suite" />
@@ -144,7 +147,7 @@ const LandingPage = () => {
       </MaxWidthWrapper>
 
       {/* ----------------------------------Footer---------------------------------- */}
-      <Footer/>
+      <Footer />
     </>
   );
 };

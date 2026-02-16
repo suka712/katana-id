@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import logo from "/logo.svg";
 import { useState } from "react";
-import { useAuthStore } from "../store/useAuthStore";
+import { useAuthStore } from "../../store/useAuthStore";
 import { toast } from "sonner";
 import { LucideLoader2 } from "lucide-react";
 import { useFormDebounce } from "@/hooks/use-form-debounce";
