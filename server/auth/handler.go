@@ -1,9 +1,7 @@
 package auth
 
 import (
-	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -12,9 +10,10 @@ import (
 	"time"
 
 	"katanaid/database"
+	"katanaid/database/ent"
+	"katanaid/database/ent/user"
 	"katanaid/shared"
 
-	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -29,7 +28,7 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	username := strings.TrimSpace(req.Username)
-	email := strings.ToLower(strings.TrimSpace(req.Email)) // Normalize. No duplicate
+	email := strings.ToLower(strings.TrimSpace(req.Email))
 	password := strings.TrimSpace(req.Password)
 
 	if username == "" || email == "" || password == "" {
@@ -67,34 +66,24 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Begin transaction, Signup rollback point
 	ctx := r.Context()
-	tx, err := database.DB.Begin(ctx)
+	tx, err := database.Client.Tx(ctx)
 	if err != nil {
 		log.Print("Error starting transaction:", err)
 		shared.WriteJSON(w, http.StatusInternalServerError, shared.ErrorResponse{Error: "Something went wrong"})
 		return
 	}
-	defer tx.Rollback(ctx)
+	defer tx.Rollback()
 
-	var userID int
-	err = tx.QueryRow(
-		ctx,
-		"INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id",
-		username,
-		email,
-		string(hashedPassword),
-	).Scan(&userID)
+	u, err := tx.User.Create().
+		SetUsername(username).
+		SetEmail(email).
+		SetPasswordHash(string(hashedPassword)).
+		Save(ctx)
 
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			switch pgErr.ConstraintName {
-			case "users_email_key":
-				shared.WriteJSON(w, http.StatusConflict, shared.ErrorResponse{Error: "Email already registered"})
-			default:
-				shared.WriteJSON(w, http.StatusConflict, shared.ErrorResponse{Error: "Account already registered"})
-			}
+		if ent.IsConstraintError(err) {
+			shared.WriteJSON(w, http.StatusConflict, shared.ErrorResponse{Error: "Email already registered"})
 			return
 		}
 		log.Print("Error creating account in DB:", err)
@@ -102,15 +91,13 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate JWT
-	tokenString, err := generateSignedToken(userID, username, email, false)
+	tokenString, err := generateSignedToken(u.ID, username, email, false)
 	if err != nil {
 		log.Print("Error generating token for signup:", err)
 		shared.WriteJSON(w, http.StatusInternalServerError, shared.ErrorResponse{Error: "Something went wrong"})
 		return
 	}
 
-	// Generate email verification token
 	rawEmailToken, hashedEmailToken, err := generateEmailVerificationToken()
 	if err != nil {
 		log.Print("Error generating token for email verification:", err)
@@ -118,10 +105,11 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = tx.Exec(ctx,
-		`INSERT INTO email_verifications (user_id, token_hash, expires_at) VALUES ($1, $2, $3)`,
-		userID, hashedEmailToken, time.Now().Add(24*time.Hour),
-	)
+	_, err = tx.EmailVerification.Create().
+		SetTokenHash(hashedEmailToken).
+		SetExpiresAt(time.Now().Add(24 * time.Hour)).
+		SetUserID(u.ID).
+		Save(ctx)
 	if err != nil {
 		log.Print("Error storing email verification:", err)
 		shared.WriteJSON(w, http.StatusInternalServerError, shared.ErrorResponse{Error: "Something went wrong"})
@@ -135,8 +123,7 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Commit transaction
-	err = tx.Commit(ctx)
+	err = tx.Commit()
 	if err != nil {
 		log.Print("Error committing transaction:", err)
 		shared.WriteJSON(w, http.StatusInternalServerError, shared.ErrorResponse{Error: "Something went wrong"})
@@ -162,13 +149,12 @@ func VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, username, email, err := verifyToken(r.Context(), database.DB, token)
+	userID, username, email, err := verifyToken(r.Context(), token)
 	if err != nil {
 		http.Redirect(w, r, fmt.Sprintf("%s/auth/verified?error=invalid_token", frontendURL), http.StatusTemporaryRedirect)
 		return
 	}
 
-	// Generate new JWT with email_verified: true
 	jwtToken, err := generateSignedToken(userID, username, email, true)
 	if err != nil {
 		http.Redirect(w, r, fmt.Sprintf("%s/auth/verified?error=token_generation_failed", frontendURL), http.StatusTemporaryRedirect)
@@ -198,12 +184,9 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user User
-	err = database.DB.QueryRow(
-		context.Background(),
-		"SELECT id, username, email, password_hash, email_verified FROM users WHERE email = $1",
-		email,
-	).Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.EmailVerified)
+	u, err := database.Client.User.Query().
+		Where(user.EmailEQ(email)).
+		Only(r.Context())
 
 	if err != nil {
 		log.Print("Incorrect username or password")
@@ -211,37 +194,32 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Notify user if user uses OAuth
-	if strings.HasPrefix(user.PasswordHash, "oauth:") {
-		parts := strings.Split(user.PasswordHash, ":")
-		provider := "OAuth"
-		if len(parts) >= 2 {
-			provider = strings.Title(parts[1]) // Capitalize Google
-		}
+	if u.AuthProvider != nil {
+		provider := strings.Title(*u.AuthProvider)
 		log.Printf("OAuth user attempted password login: %s", email)
 		shared.WriteJSON(w, http.StatusBadRequest, shared.ErrorResponse{Error: fmt.Sprintf("This account uses %s login", provider)})
 		return
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
+	err = bcrypt.CompareHashAndPassword([]byte(*u.PasswordHash), []byte(password))
 	if err != nil {
 		log.Print("Incorrect username or password")
 		shared.WriteJSON(w, http.StatusBadRequest, shared.ErrorResponse{Error: "Incorrect username or password"})
 		return
 	}
 
-	tokenString, err := generateSignedToken(user.ID, user.Username, user.Email, user.EmailVerified)
+	tokenString, err := generateSignedToken(u.ID, u.Username, u.Email, u.EmailVerified)
 	if err != nil {
 		log.Print("Error generating token for login:", err)
 		shared.WriteJSON(w, http.StatusInternalServerError, shared.ErrorResponse{Error: "Something went wrong"})
 		return
 	}
 
-	log.Printf("User logged in: %s - %s", user.Username, user.Email)
+	log.Printf("User logged in: %s - %s", u.Username, u.Email)
 	shared.WriteJSON(w, http.StatusOK, AuthSuccessResponse{
 		Token:         tokenString,
-		Username:      user.Username,
-		Email:         user.Email,
-		EmailVerified: user.EmailVerified,
+		Username:      u.Username,
+		Email:         u.Email,
+		EmailVerified: u.EmailVerified,
 	})
 }

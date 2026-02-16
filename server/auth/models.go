@@ -1,13 +1,5 @@
 package auth
 
-type User struct {
-	ID            int
-	Username      string
-	Email         string
-	PasswordHash  string
-	EmailVerified bool
-}
-
 type SignupRequest struct {
 	Username string `json:"username"`
 	Email    string `json:"email"`

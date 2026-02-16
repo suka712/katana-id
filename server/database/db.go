@@ -6,33 +6,34 @@ import (
 	"log"
 	"os"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"katanaid/database/ent"
+
+	_ "github.com/lib/pq"
 )
 
-// Database connection pool
-var DB *pgxpool.Pool
+var Client *ent.Client
 
-// Connect initializes the database connection pool
 func Connect() {
-	// Get database URL from environment variables
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
 		log.Fatal("DATABASE_URL is not set")
 	}
 
-	// Create connection pool
-	pool, err := pgxpool.New(context.Background(), databaseURL)
+	client, err := ent.Open("postgres", databaseURL)
 	if err != nil {
 		log.Fatal("Unable to connect to database:", err)
 	}
 
-	DB = pool
+	if err := client.Schema.Create(context.Background()); err != nil {
+		log.Fatal("Failed to create schema:", err)
+	}
+
+	Client = client
 	fmt.Println("Connected to PostgreSQL database successfully!")
 }
 
-// Close closes the database connection pool
 func Close() {
-	if DB != nil {
-		DB.Close()
+	if Client != nil {
+		Client.Close()
 	}
 }

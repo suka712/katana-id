@@ -17,6 +17,8 @@ import (
 	"time"
 
 	"katanaid/database"
+	"katanaid/database/ent"
+	"katanaid/database/ent/user"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
@@ -437,61 +439,49 @@ func findOrCreateOAuthUser(email, name, provider string, emailVerified bool) (st
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// Use transaction to avoid race conditions
-	tx, err := database.DB.Begin(ctx)
+	tx, err := database.Client.Tx(ctx)
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", ErrDatabaseError, err)
 	}
-	defer tx.Rollback(ctx)
+	defer tx.Rollback()
 
 	var userID int
 	var username string
 
-	// Check if user exists
-	err = tx.QueryRow(ctx,
-		"SELECT id, username FROM users WHERE email = $1",
-		email,
-	).Scan(&userID, &username)
+	u, err := tx.User.Query().
+		Where(user.EmailEQ(email)).
+		Only(ctx)
 
-	if err != nil {
-		// User doesn't exist, create new one
-		// Use OAuth name as username, fallback to email prefix
+	if ent.IsNotFound(err) {
 		username = sanitizeUsername(name)
 		if username == "" {
 			username = sanitizeUsername(strings.Split(email, "@")[0])
 		}
 
-		// Generate secure random token for OAuth users (not a password)
-		randomBytes := make([]byte, 32)
-		if _, err := rand.Read(randomBytes); err != nil {
-			return "", fmt.Errorf("failed to generate random token: %w", err)
-		}
-		oauthToken := base64.StdEncoding.EncodeToString(randomBytes)
-
-		err = tx.QueryRow(ctx,
-			`INSERT INTO users (username, email, password_hash, email_verified)
-			 VALUES ($1, $2, $3, TRUE)
-			 RETURNING id`,
-			username,
-			email,
-			"oauth:"+provider+":"+oauthToken,
-		).Scan(&userID)
-
+		created, err := tx.User.Create().
+			SetUsername(username).
+			SetEmail(email).
+			SetAuthProvider(provider).
+			SetEmailVerified(true).
+			Save(ctx)
 		if err != nil {
 			return "", fmt.Errorf("%w: %v", ErrDatabaseError, err)
 		}
 
+		userID = created.ID
 		log.Printf("New OAuth user created: %s (%s) via %s", username, email, provider)
+	} else if err != nil {
+		return "", fmt.Errorf("%w: %v", ErrDatabaseError, err)
 	} else {
+		userID = u.ID
+		username = u.Username
 		log.Printf("OAuth user logged in: %s (%s) via %s", username, email, provider)
 	}
 
-	// Commit transaction
-	if err := tx.Commit(ctx); err != nil {
+	if err := tx.Commit(); err != nil {
 		return "", fmt.Errorf("%w: %v", ErrDatabaseError, err)
 	}
 
-	// Generate JWT token
 	return generateSignedToken(userID, username, email, true)
 }
 

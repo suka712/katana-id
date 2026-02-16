@@ -1,7 +1,6 @@
 package contact
 
 import (
-	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -48,13 +47,10 @@ func Contact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = database.DB.Exec(
-		context.Background(),
-		"INSERT INTO contacts (email, reason) VALUES ($1, $2)",
-		email,
-		reason,
-	)
-
+	_, err = database.Client.Contact.Create().
+		SetEmail(email).
+		SetReason(reason).
+		Save(r.Context())
 	if err != nil {
 		log.Print("Error saving contact:", err)
 		shared.WriteJSON(w, http.StatusInternalServerError, shared.ErrorResponse{Error: "Failed to submit contact"})

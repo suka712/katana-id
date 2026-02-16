@@ -1,8 +1,6 @@
 package main
 
 import (
-	"database/sql"
-	"embed"
 	"fmt"
 	"log"
 	"net/http"
@@ -15,16 +13,11 @@ import (
 	"katanaid/identity"
 	"katanaid/middleware"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
-	"github.com/pressly/goose/v3"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 )
-
-//go:embed migrations/*.sql
-var embedMigrations embed.FS
 
 func main() {
 	err := godotenv.Load()
@@ -53,25 +46,6 @@ func main() {
 		}
 	}
 
-	// Open DB to run migration
-	db, err := sql.Open("pgx", os.Getenv("DATABASE_URL"))
-	if err != nil {
-		log.Fatal("Failed to open DB for migrations:", err)
-	}
-
-	goose.SetBaseFS(embedMigrations)
-
-	if err := goose.SetDialect("postgres"); err != nil {
-		log.Fatal("Failed to set dialect:", err)
-	}
-
-	if err := goose.Up(db, "migrations"); err != nil {
-		log.Fatal("Failed to run migrations:", err)
-	}
-
-	db.Close()
-
-	// Open DB for user operation
 	database.Connect()
 	defer database.Close()
 
