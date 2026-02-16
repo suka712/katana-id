@@ -15,9 +15,6 @@ var Client *ent.Client
 
 func Connect() {
 	databaseURL := os.Getenv("DATABASE_URL")
-	if databaseURL == "" {
-		log.Fatal("DATABASE_URL is not set")
-	}
 
 	client, err := ent.Open("postgres", databaseURL)
 	if err != nil {
@@ -29,7 +26,7 @@ func Connect() {
 	}
 
 	Client = client
-	fmt.Println("Connected to PostgreSQL database successfully!")
+	fmt.Println("Connected to PostgreSQL database successfully")
 }
 
 func Close() {

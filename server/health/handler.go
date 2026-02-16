@@ -14,7 +14,7 @@ type HealthResponse struct {
 
 func Health(w http.ResponseWriter, r *http.Request) {
 	response := HealthResponse{
-		Status:    "healthy",
+		Status:    "ok",
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	}
 
