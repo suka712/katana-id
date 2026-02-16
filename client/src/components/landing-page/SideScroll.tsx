@@ -13,7 +13,7 @@ export const SideScroll = () => {
   return (
     <AnimationContainer delay={0.50} className="flex flex-col items-center justify-center w-full pt-20">
       {/* First row */}
-      <div className="relative mt-14 overflow-hidden py-2 max-w-7xl">
+      <div className="relative mt-14 overflow-hidden py-2 max-w-7xl w-full">
         <div className="absolute left-0 top-0 bottom-0 w-24 bg-linear-to-r from-background to-transparent z-10 pointer-events-none" />
         <div className="absolute right-0 top-0 bottom-0 w-24 bg-linear-to-l from-background to-transparent z-10 pointer-events-none" />
         <div className="flex animate-[scroll_35s_linear_infinite] w-max gap-3">
@@ -37,7 +37,7 @@ export const SideScroll = () => {
       </div>
 
       {/* Second row */}
-      <div className="relative overflow-hidden max-w-7mvh py-2">
+      <div className="relative overflow-hidden w-full py-2">
         <div className="absolute left-0 top-0 bottom-0 w-24 bg-linear-to-r from-background to-transparent z-10 pointer-events-none" />
         <div className="absolute right-0 top-0 bottom-0 w-24 bg-linear-to-l from-background to-transparent z-10 pointer-events-none" />
         <div className="flex animate-[scroll_40s_linear_infinite] w-max gap-3">
