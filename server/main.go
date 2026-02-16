@@ -49,7 +49,7 @@ func main() {
 	r.Get("/health", health.Health)
 
 	r.Route("/auth", func(r chi.Router) {
-		r.Use(middleware.RateLimiterPerMinute(12))
+		r.Use(middleware.RateLimiterPerMinute(20))
 		r.Post("/signup", auth.Signup)
 		r.Post("/login", auth.Login)
 		r.Get("/google", auth.GoogleLogin)
@@ -59,11 +59,11 @@ func main() {
 		r.Get("/verify-email", auth.VerifyEmail)
 	})
 
-	r.With(middleware.RateLimiterPerMinute(12)).Post("/api/contact", contact.Contact)
+	r.With(middleware.RateLimiterPerMinute(20)).Post("/api/contact", contact.Contact)
 
 	r.Route("/api", func(r chi.Router) {
 		r.Use(middleware.AuthMiddleware)
-		r.Use(middleware.RateLimiterPerMinute(10))
+		r.Use(middleware.RateLimiterPerMinute(20))
 		r.Post("/identity/username", identity.GenerateUsername)
 		r.Post("/identity/avatar", identity.GenerateAvatar)
 	})
