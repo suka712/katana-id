@@ -21,7 +21,7 @@ const LandingPage = () => {
         <h1 className="text-5xl md:text-8xl leading-tight text-center mt-5 max-w-6xl">
           The{" "}
           <span className="bg-linear-to-r from-blue-500 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_0_5px_--theme(--color-blue-500/80%)]">
-            Authentication Blade
+            Branding toolkit
           </span>{" "}
           Your Platform{" "}
           <span className="bg-linear-to-r from-white to-slate-400 bg-clip-text text-transparent drop-shadow-[0_0_5px_var(--color-slate-400)]">
