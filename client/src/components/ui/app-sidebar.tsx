@@ -22,7 +22,7 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
-import Logo from "./Logo";
+import Logo from "../Logo";
 
 const data = {
   user: {
