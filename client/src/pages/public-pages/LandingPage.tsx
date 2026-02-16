@@ -30,9 +30,9 @@ const LandingPage = () => {
           Domains, Social handles, Search presence — all in one click.
         </p>
 
-        <div className="flex items-center justify-center gap-2 mt-12">
-          <Input placeholder='I am building Tinder but for Dog lovers called "Ruffle" . . .' className="w-2xs md:w-md shadow-blue-200" />
-          <Button variant="outline" asChild className="shadow-xl shadow-blue-200">
+        <div className="flex items-center justify-center gap-2 mt-16">
+          <Input placeholder='I am building Tinder but for Dog lovers called "Ruffle" . . .' className="w-2xs md:w-xl shadow-blue-200 rounded-full" />
+          <Button variant="outline" asChild className="shadow-xl shadow-blue-200 rounded-full">
             <Link to="/login">Check</Link>
           </Button>
         </div>
