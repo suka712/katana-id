@@ -21,7 +21,7 @@ import (
 )
 
 func main() {
-	godotenv.Load()	
+	godotenv.Load()
 	config.RequireEnvs()
 
 	database.Connect()
@@ -52,19 +52,18 @@ func main() {
 		r.Use(middleware.RateLimiterPerMinute(12))
 		r.Post("/signup", auth.Signup)
 		r.Post("/login", auth.Login)
+		r.Get("/google", auth.GoogleLogin)
+		r.Get("/google/callback", auth.GoogleCallback)
+		r.Get("/github", auth.GitHubLogin)
+		r.Get("/github/callback", auth.GitHubCallback)
 		r.Get("/verify-email", auth.VerifyEmail)
 	})
 
-	r.With(middleware.RateLimiterPerHour(3)).Post("/api/contact", contact.Contact)
-
-	r.Get("/auth/google", auth.GoogleLogin)
-	r.Get("/auth/google/callback", auth.GoogleCallback)
-	r.Get("/auth/github", auth.GitHubLogin)
-	r.Get("/auth/github/callback", auth.GitHubCallback)
+	r.With(middleware.RateLimiterPerMinute(12)).Post("/api/contact", contact.Contact)
 
 	r.Route("/api", func(r chi.Router) {
 		r.Use(middleware.AuthMiddleware)
-		r.Use(middleware.RateLimiterPerHour(3))
+		r.Use(middleware.RateLimiterPerMinute(10))
 		r.Post("/identity/username", identity.GenerateUsername)
 		r.Post("/identity/avatar", identity.GenerateAvatar)
 	})
