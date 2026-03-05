@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"errors"
+	"log"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -22,11 +23,13 @@ func Connect(ctx context.Context, connString string) (*gendb.Queries, *pgxpool.P
 	}
 
 	queries := gendb.New(pool)
+
+	log.Print("☁️  DB connected")
 	
 	return queries, pool, nil
 }
 
-func runMigrations(dbURL string) error {
+func RunMigrations(dbURL string) error {
 	source, err := iofs.New(migrationsFS, "migrations")
 	if err != nil {
 		return err
@@ -39,6 +42,9 @@ func runMigrations(dbURL string) error {
 
 	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return err
-	}	
+	}
+
+	log.Print("🌙 Successful migration")
+
 	return nil
 }

@@ -1,9 +1,14 @@
 # Environment
 .env
 
+# Local
+*.local
+
 # Go binary
 server/katanaid
 server/katanaid.exe
+main
+out
 
 # Node
 node_modules/

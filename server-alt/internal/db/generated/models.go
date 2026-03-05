@@ -8,12 +8,25 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Otp struct {
+	ID        pgtype.UUID
+	Email     string
+	Otp       string
+	ExpiresAt pgtype.Timestamptz
+}
+
 type Provider struct {
 	ID                pgtype.UUID
 	UserID            pgtype.UUID
 	ProviderName      string
 	ProviderAccountID string
 	CreatedAt         pgtype.Timestamptz
+}
+
+type Session struct {
+	Token     pgtype.UUID
+	Email     string
+	ExpiresAt pgtype.Timestamptz
 }
 
 type User struct {

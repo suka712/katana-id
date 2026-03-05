@@ -7,7 +7,68 @@ package gendb
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const createOTP = `-- name: CreateOTP :exec
+INSERT INTO otps (email, otp, expires_at)
+VALUES ($1, $2, $3)
+`
+
+type CreateOTPParams struct {
+	Email     string
+	Otp       string
+	ExpiresAt pgtype.Timestamptz
+}
+
+func (q *Queries) CreateOTP(ctx context.Context, arg CreateOTPParams) error {
+	_, err := q.db.Exec(ctx, createOTP, arg.Email, arg.Otp, arg.ExpiresAt)
+	return err
+}
+
+const createProvider = `-- name: CreateProvider :one
+INSERT INTO providers (user_id, provider_name, provider_account_id)
+VALUES ($1, $2, $3)
+RETURNING id, user_id, provider_name, provider_account_id, created_at
+`
+
+type CreateProviderParams struct {
+	UserID            pgtype.UUID
+	ProviderName      string
+	ProviderAccountID string
+}
+
+func (q *Queries) CreateProvider(ctx context.Context, arg CreateProviderParams) (Provider, error) {
+	row := q.db.QueryRow(ctx, createProvider, arg.UserID, arg.ProviderName, arg.ProviderAccountID)
+	var i Provider
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.ProviderName,
+		&i.ProviderAccountID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const createSession = `-- name: CreateSession :one
+INSERT INTO sessions (email, expires_at)
+VALUES ($1, $2)
+RETURNING token, email, expires_at
+`
+
+type CreateSessionParams struct {
+	Email     string
+	ExpiresAt pgtype.Timestamptz
+}
+
+func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error) {
+	row := q.db.QueryRow(ctx, createSession, arg.Email, arg.ExpiresAt)
+	var i Session
+	err := row.Scan(&i.Token, &i.Email, &i.ExpiresAt)
+	return i, err
+}
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (username, email, email_verified)
