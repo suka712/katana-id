@@ -6,7 +6,7 @@ import { BentoCard, BentoGrid, CARDS } from "@/components/ui/bento-grid";
 import { Button } from "@/components/ui/button";
 import MagicBadge from "@/components/ui/magic-badge";
 import { LampContainer } from "@/components/ui/lamp";
-import Footer from "@/components/Footer";
+import Footer from "@/components/landing-page/Footer";
 import NavBar from "@/components/NavBar";
 import { Input } from "@/components/ui/input";
 import { Comparison } from "@/components/landing-page/Comparison";

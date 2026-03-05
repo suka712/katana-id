@@ -1,5 +1,5 @@
 import AnimationContainer from "@/components/ui/animation-container"
-import Logo from "./Logo"
+import Logo from "../Logo"
 
 const Footer = () => {
     return (
