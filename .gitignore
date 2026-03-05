@@ -9,6 +9,7 @@ server/katanaid
 server/katanaid.exe
 main
 out
+tmp
 
 # Node
 node_modules/

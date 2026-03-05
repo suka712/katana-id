@@ -45,7 +45,8 @@ func main() {
 	r.Get("/health", health.Health)
 
 	r.Route("/auth", func(r chi.Router) {
-		r.With(httprate.Limit(1, 1 * time.Minute)).Post("/send-otp", auth.SendOTP)
+		r.With(httprate.Limit(1, 1*time.Minute)).Post("/send-otp", auth.SendOTP)
+		r.Post("/verify-otp", auth.VerifyOTP)
 	})
 
 	port := os.Getenv("PORT")
