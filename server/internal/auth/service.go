@@ -23,16 +23,22 @@ func genOTP() (string, error) {
 func sendOTP(client *resend.Client, email string, otp string) error {
 	from := []string{"Khiem", "Anh"}[mathrand.Intn(2)]
 	content := fmt.Sprintf(`
-		<p>Hello, this is %s from KatanaID</p>
-		<div style="font-family: sans-serif; max-width: 400px; margin: 0 auto; padding: 20px;">
-		<p>Your verification code is</p>
-  	<div style="font-size: 32px; font-weight: bold; letter-spacing: 8px; padding: 20px; background: #f4f4f4; text-align: center; border-radius: 8px;">
-    %s
-  	</div>
-  	<p style="color: #666; margin-top: 16px;">It will expire in 5 minutes.</p>
-  	<p style="color: #999; font-size: 12px;">If you didn't request this, you can ignore this email.</p>
-		</div>
-		<p>Thanks, from KatanaID team</p>
+		<!DOCTYPE html>
+		<html>
+		<head><meta charset="UTF-8"></head>
+		<body>
+			<div style="font-family: sans-serif; max-width: 400px; margin: 0 auto; padding: 20px;">
+				<p>Hello, this is %s from KatanaID</p>
+				<p>Your verification code is</p>
+				<div style="font-size: 32px; font-weight: bold; letter-spacing: 8px; padding: 20px; background: #f4f4f4; text-align: center; border-radius: 8px;">
+					%s
+				</div>
+				<p style="color: #666; margin-top: 16px;">It will expire in 5 minutes.</p>
+				<p style="color: #999; font-size: 12px;">If you didn&#39;t request this, you can ignore this email.</p>
+				<p>Thanks, from KatanaID team</p>
+			</div>
+		</body>
+		</html>
 	`, from, otp)
 
 	_, err := client.Emails.Send(&resend.SendEmailRequest{
