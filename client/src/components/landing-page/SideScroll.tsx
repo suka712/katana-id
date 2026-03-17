@@ -2,11 +2,17 @@ import AnimationContainer from "../ui/animation-container";
 
 export const SideScroll = () => {
   const TickerItem = ({ name, available }: { name: string; available: boolean }) => (
-    <div className="flex items-center gap-1.5 rounded-full border border-border/10 bg-card/35 px-6 py-1.5 shadow-sm shadow-foreground/5 shrink-0">
-      <span className={`text-md font-medium ${available ? "text-emerald-600" : "text-red-400"}`}>
-        {available ? "\u2713" : "\u2717"}
+    <div
+      className={`flex items-center gap-1.5 rounded-full border px-6 py-1.5 shrink-0 backdrop-blur-sm transition-all ${
+        available
+          ? "border-cyan-500/20 bg-cyan-500/5 shadow-[0_0_12px_-4px_oklch(80%_0.15_200/0.4)]"
+          : "border-white/8 bg-white/3"
+      }`}
+    >
+      <span className={`text-md font-semibold ${available ? "text-cyan-400" : "text-red-400/70"}`}>
+        {available ? "✓" : "✗"}
       </span>
-      <span className="text-xs text-foreground/80 whitespace-nowrap">{name}</span>
+      <span className="text-xs text-foreground/70 whitespace-nowrap">{name}</span>
     </div>
   );
 

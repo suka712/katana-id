@@ -1,7 +1,7 @@
 import { Route, Routes } from "react-router-dom";
 import { Toaster } from "sonner";
 import LandingPage from "./pages/public-pages/LandingPage";
-import LoginPage from "./pages/public-pages/LoginPage";
+import LoginPage from "./pages/public-pages/SignInPage";
 
 function App() {
   return (

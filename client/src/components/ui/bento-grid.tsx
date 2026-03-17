@@ -99,12 +99,16 @@ const BentoCard = ({
     key={name}
     className={cn(
       "group relative col-span-3 flex flex-col justify-between overflow-hidden rounded-xl h-50",
-      "bg-card border border-border/60 shadow-md hover:shadow-lg transition-shadow duration-300",
+      "bg-card border border-white/8 shadow-md",
+      "hover:border-primary/30 hover:shadow-[0_0_32px_-8px_oklch(65%_0.22_268/0.35)]",
+      "transition-all duration-500",
       className
     )}
   >
+    {/* Subtle gradient mesh inside card */}
+    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,oklch(65%_0.22_268/0.06)_0%,transparent_60%)] pointer-events-none" />
     <div className="pointer-events-none z-10 flex flex-col gap-1 p-6 transition-all duration-300 group-hover:-translate-y-10">
-      <Icon className="h-12 w-12 origin-left text-primary/70 transition-all duration-300 ease-in-out group-hover:scale-75" />
+      <Icon className="h-12 w-12 origin-left text-primary transition-all duration-300 ease-in-out group-hover:scale-75 group-hover:text-cyan-400" />
       <h3 className="text-xl font-semibold text-foreground">{name}</h3>
       <p className="max-w-lg text-muted-foreground">{description}</p>
     </div>
@@ -119,14 +123,13 @@ const BentoCard = ({
         className={buttonVariants({
           size: "sm",
           variant: "ghost",
-          className: "cursor-pointer",
+          className: "cursor-pointer text-primary hover:text-cyan-400",
         })}
       >
         {cta}
         <ArrowRightIcon className="ml-2 h-4 w-4" />
       </a>
     </div>
-    <div className="pointer-events-none absolute inset-0 transition-all duration-300 group-hover:bg-foreground/[.02]" />
   </div>
 );
 

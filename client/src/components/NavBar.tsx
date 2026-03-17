@@ -22,7 +22,7 @@ const NavBar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 supports-backdrop-filter:bg-background/50 z-50">
+    <header className="sticky top-0 z-50 backdrop-blur-xl bg-background/70 border-b border-white/6">
       <nav
         className={`flex items-center mx-auto max-w-7xl px-4 py-4 transition-opacity duration-500 ${
           showNavbar ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -42,16 +42,16 @@ const NavBar = () => {
         {/* Desktop navigation */}
         <div className="hidden lg:flex flex-3 gap-2 justify-center">
           <div>
-            <Button className="rounded-l-3xl rounded-r-none">Development</Button>
-            <Button className="rounded-none">Donate</Button>
-            <Button className="rounded-l-none">Support</Button>
+            <Button variant="secondary" className="rounded-l-3xl rounded-r-none border border-white/8">Development</Button>
+            <Button variant="secondary" className="rounded-none border-y border-white/8">Donate</Button>
+            <Button variant="secondary" className="rounded-l-none rounded-r-none border border-white/8">Support</Button>
           </div>
           <div>
-            <Button className="rounded-l-md rounded-r-none" asChild>
+            <Button variant="secondary" className="rounded-l-md rounded-r-none border border-white/8" asChild>
               <a href="https://docs.katanaid.com/">Docs</a>
             </Button>
             <ContactDialog>
-              <Button className="rounded-l-none rounded-r-3xl">Contact</Button>
+              <Button variant="secondary" className="rounded-l-none rounded-r-3xl border border-white/8">Contact</Button>
             </ContactDialog>
           </div>
         </div>

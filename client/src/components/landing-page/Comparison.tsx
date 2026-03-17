@@ -36,8 +36,8 @@ export const Comparison = () => {
           <span
             key={r.platform}
             className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${r.ok
-              ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
-              : "bg-red-50 text-red-500 border border-red-200/60"
+              ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"
+              : "bg-red-500/10 text-red-400 border border-red-500/20"
               }`}
           >
             {r.platform} {r.ok ? "\u2713" : "\u2717"}
@@ -51,10 +51,10 @@ export const Comparison = () => {
     <MaxWidthWrapper className="flex flex-col justify-center items-center pt-36 md:pt-50 relative z-10">
       {/* Punch line */}
       <AnimationContainer delay={0.1}>
-        <p className="text-center text-3xl md:text-5xl leading-tight font-medium font-heading text-foreground mt-6">
+        <p className="text-center text-3xl md:text-5xl leading-tight font-heading text-foreground mt-6">
           Finding a name used to take days{" "}
           <br/>
-          <span className="bg-linear-to-r from-primary to-blue-400 bg-clip-text text-transparent">
+          <span className="bg-linear-to-r from-violet-400 via-indigo-400 to-cyan-400 bg-clip-text text-transparent italic">
             now it takes minutes.
           </span>
         </p>
@@ -88,7 +88,7 @@ export const Comparison = () => {
             <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-6">
               With KatanaID
             </p>
-            <div className="rounded-xl border border-primary/20 bg-card p-5 shadow-lg ring-1 ring-primary/5">
+            <div className="rounded-xl border border-primary/25 bg-card/80 backdrop-blur-sm p-5 shadow-[0_0_40px_-10px_oklch(65%_0.22_268/0.3)] ring-1 ring-primary/10">
               {/* Fake input */}
               <div className="flex items-center gap-2 mb-4">
                 <div className="flex-1 h-9 rounded-lg bg-muted/50 border border-border/60 px-3 flex items-center">

@@ -16,10 +16,10 @@ import { LucideLoader2 } from "lucide-react";
 import { useFormDebounce } from "@/hooks/use-form-debounce";
 import { OAuthButtons } from "@/components/OAuthButtons";
 
-export function LoginForm({
+export const SignInForm = ({
   className,
   ...props
-}: React.ComponentProps<"form">) {
+}: React.ComponentProps<"form">) => {
   const { login, isLoggingIn } = useAuthStore();
   const navigate = useNavigate();
 
