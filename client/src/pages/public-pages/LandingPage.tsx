@@ -38,7 +38,7 @@ const LandingPage = () => {
             className="w-2xs md:w-xl rounded-full border-white/10 bg-white/5 backdrop-blur-sm shadow-[0_0_24px_-6px_oklch(65%_0.22_268/0.25)] focus-visible:border-primary/40"
           />
           <Button asChild className="rounded-full shadow-[0_0_24px_-4px_oklch(65%_0.22_268/0.5)] hover:shadow-[0_0_32px_-4px_oklch(65%_0.22_268/0.7)] transition-shadow">
-            <Link to="/login">Check</Link>
+            <Link to="/signin">Check</Link>
           </Button>
         </div>
       </div>

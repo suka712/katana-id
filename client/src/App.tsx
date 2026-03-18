@@ -1,7 +1,7 @@
 import { Route, Routes } from "react-router-dom";
 import { Toaster } from "sonner";
 import LandingPage from "./pages/public-pages/LandingPage";
-import LoginPage from "./pages/public-pages/LoginPage";
+import LoginPage from "./pages/public-pages/SignInPage";
 
 function App() {
   return (
@@ -9,7 +9,7 @@ function App() {
       <Toaster position="top-center" />
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signin" element={<LoginPage />} />
       </Routes>
     </>
   );
