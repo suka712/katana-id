@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -84,10 +84,6 @@ export const SignInForm = ({
       // error already toasted
     }
   };
-
-  useEffect(() => {
-    setStep("otp")
-  }, [])
 
   return (
     <form
