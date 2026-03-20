@@ -1,5 +1,5 @@
 import { ArrowRightIcon } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import AnimationContainer from "@/components/ui/animation-container";
 import MaxWidthWrapper from "@/components/ui/max-width-container";
 import { BentoCard, BentoGrid, CARDS } from "@/components/ui/bento-grid";
@@ -8,11 +8,14 @@ import MagicBadge from "@/components/ui/magic-badge";
 import { LampContainer } from "@/components/ui/lamp";
 import Footer from "@/components/landing-page/Footer";
 import NavBar from "@/components/landing-page/NavBar";
-import { Input } from "@/components/ui/input";
 import { Comparison } from "@/components/landing-page/Comparison";
 import { SideScroll } from "@/components/landing-page/SideScroll";
+import { QueryInput } from "@/components/ui/QueryInput";
 
 const LandingPage = () => {
+  const navigate = useNavigate();
+  const goToResult = (q: string) => navigate(`/result?q=${encodeURIComponent(q)}`);
+
   return (
     <>
       {/* ----------------------------------NavBar---------------------------------- */}
@@ -32,15 +35,10 @@ const LandingPage = () => {
           Domains, Social handles, Search presence — all in one click.
         </p>
 
-        <div className="flex items-center justify-center gap-2 mt-16">
-          <Input
-            placeholder='I am building Tinder but for Dog lovers called "Ruffle" . . .'
-            className="w-2xs md:w-xl rounded-full border-white/10 bg-white/5 backdrop-blur-sm shadow-[0_0_24px_-6px_oklch(65%_0.22_268/0.25)] focus-visible:border-primary/40"
-          />
-          <Button asChild className="rounded-full shadow-[0_0_24px_-4px_oklch(65%_0.22_268/0.5)] hover:shadow-[0_0_32px_-4px_oklch(65%_0.22_268/0.7)] transition-shadow">
-            <Link to="/signin">Check</Link>
-          </Button>
-        </div>
+        <QueryInput
+          onSearch={goToResult}
+          className="mt-16 w-xs md:w-2xl"
+        />
       </div>
 
       {/* ----------------------------------Side scroll---------------------------------- */}

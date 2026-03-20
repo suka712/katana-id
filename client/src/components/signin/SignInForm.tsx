@@ -12,7 +12,7 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2, Pen, RotateCcw } from "lucide-react";
 import { OAuthButtons } from "@/components/signin/OAuthButtons";
 import { axiosInstance } from "@/lib/axios";
@@ -24,6 +24,8 @@ export const SignInForm = ({
   ...props
 }: React.ComponentProps<"form">) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirect = searchParams.get("redirect");
   const [step, setStep] = useState<"email" | "otp">("email");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -58,7 +60,7 @@ export const SignInForm = ({
       setLoading(true);
       try {
         await axiosInstance.post("/auth/verify-otp", { Email: email, OTP: otp });
-        navigate("/");
+        navigate(redirect ?? "/");
       } catch (err) {
         const msg =
           err instanceof AxiosError

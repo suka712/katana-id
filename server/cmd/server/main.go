@@ -14,6 +14,7 @@ import (
 	"github.com/resend/resend-go/v3"
 
 	"github.com/trnahnh/katana-id/internal/auth"
+	"github.com/trnahnh/katana-id/internal/check"
 	"github.com/trnahnh/katana-id/internal/db"
 	"github.com/trnahnh/katana-id/internal/health"
 	"github.com/trnahnh/katana-id/util"
@@ -35,7 +36,14 @@ func main() {
 	}
 
 	emailClient := resend.NewClient(os.Getenv("RESEND_API_KEY"))
-	auth := &auth.Handler{Queries: queries, EmailClient: emailClient}
+	authHandler := &auth.Handler{Queries: queries, EmailClient: emailClient}
+
+	checkHandler := &check.Handler{
+		Store:        check.NewStore(),
+		GitHubToken:  os.Getenv("GITHUB_TOKEN"),
+		BraveAPIKey:  os.Getenv("BRAVE_API_KEY"),
+		TwitterToken: os.Getenv("TWITTER_BEARER_TOKEN"),
+	}
 
 	r := chi.NewRouter()
 
@@ -45,10 +53,16 @@ func main() {
 	r.Get("/health", health.Health)
 
 	r.Route("/auth", func(r chi.Router) {
-		r.With(httprate.Limit(1, 1*time.Minute)).Post("/send-otp", auth.SendOTP)
-		r.Post("/verify-otp", auth.VerifyOTP)
-		r.Get("/me", auth.Me)
-		r.Post("/logout", auth.Logout)
+		r.With(httprate.Limit(1, 1*time.Minute)).Post("/send-otp", authHandler.SendOTP)
+		r.Post("/verify-otp", authHandler.VerifyOTP)
+		r.Get("/me", authHandler.Me)
+		r.Post("/logout", authHandler.Logout)
+	})
+
+	r.Route("/check", func(r chi.Router) {
+		r.Use(authHandler.RequireAuth)
+		r.Post("/", checkHandler.Check)
+		r.Get("/{id}", checkHandler.Stream)
 	})
 
 	port := os.Getenv("PORT")
