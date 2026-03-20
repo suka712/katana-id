@@ -270,8 +270,8 @@ function NameCard({
   name,
   index,
   cells,
-  status,
-  completed,
+  // status,
+  // completed,
   total,
   hasSearch,
 }: {
