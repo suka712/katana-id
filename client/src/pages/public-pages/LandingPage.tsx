@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import MagicBadge from "@/components/ui/magic-badge";
 import { LampContainer } from "@/components/ui/lamp";
 import Footer from "@/components/landing-page/Footer";
-import NavBar from "@/components/NavBar";
+import NavBar from "@/components/landing-page/NavBar";
 import { Input } from "@/components/ui/input";
 import { Comparison } from "@/components/landing-page/Comparison";
 import { SideScroll } from "@/components/landing-page/SideScroll";

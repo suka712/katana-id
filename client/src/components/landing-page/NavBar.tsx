@@ -1,18 +1,12 @@
 import { useState } from "react";
-import { Button } from "./ui/button";
+
 import { Menu, X, Globe } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useScrollNavbar } from "@/hooks/useScrollNavbar";
-import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuList,
-  NavigationMenuLink,
-  NavigationMenuTrigger,
-} from "./ui/navigation-menu";
 import { ContactDialog } from "./ContactDialog";
-import Logo from "./Logo";
+import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger } from "../ui/navigation-menu";
+import Logo from "../Logo";
+import { Button } from "../ui/button";
 
 const NavBar = () => {
   const navigate = useNavigate();

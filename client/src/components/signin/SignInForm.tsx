@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import {
   Field,
   FieldGroup,
-  FieldLabel,
   FieldSeparator,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -105,7 +104,6 @@ export const SignInForm = ({
           ) : (
             <>
               <div className="flex items-center justify-between">
-                <FieldLabel>Enter your OTP</FieldLabel>
               </div>
               <div className="flex justify-between">
                 <InputOTP
