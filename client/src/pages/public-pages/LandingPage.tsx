@@ -87,7 +87,7 @@ const LandingPage = () => {
               </p>
               <div className="mt-6">
                 <Button asChild>
-                  <Link to="/login">
+                  <Link to="/signin">
                     Check your name
                     <ArrowRightIcon className="w-4 h-4 ml-2" />
                   </Link>

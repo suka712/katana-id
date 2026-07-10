@@ -5,6 +5,7 @@ import LandingPage from "./pages/public-pages/LandingPage";
 import SignInPage from "./pages/public-pages/SignInPage";
 import NotFoundPage from "./pages/public-pages/NotFoundPage";
 import ResultPage from "./pages/app-pages/ResultPage";
+import { AuthProvider } from "@/lib/auth";
 
 const pageVariants = {
   initial: { opacity: 0, y: 8 },
@@ -30,10 +31,10 @@ const AnimatedRoutes = () => {
 
 const App = () => {
   return (
-    <>
+    <AuthProvider>
       <Toaster position="top-center" />
       <AnimatedRoutes />
-    </>
+    </AuthProvider>
   );
 }
 

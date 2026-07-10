@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Menu, X, Globe } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useScrollNavbar } from "@/hooks/useScrollNavbar";
+import { useAuth } from "@/lib/auth";
 import { ContactDialog } from "./ContactDialog";
 import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger } from "../ui/navigation-menu";
 import Logo from "../Logo";
@@ -11,6 +12,7 @@ import { Button } from "../ui/button";
 const NavBar = () => {
   const navigate = useNavigate();
   const { showNavbar } = useScrollNavbar();
+  const { user, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -73,9 +75,15 @@ const NavBar = () => {
               </NavigationMenuItem>
             </NavigationMenuList>
           </NavigationMenu>
-            <Button onClick={() => navigate("/signup")}>
-              Sign in
-            </Button>
+            {user ? (
+              <Button variant="secondary" onClick={() => signOut()}>
+                Sign out
+              </Button>
+            ) : (
+              <Button onClick={() => navigate("/signin")}>
+                Sign in
+              </Button>
+            )}
         </div>
 
         {/* Mobile hamburger button */}
@@ -127,15 +135,28 @@ const NavBar = () => {
               Vietnamese
             </Button>
             <div className="border-t my-2" />
-              <Button
-                className="w-full"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  navigate("/signup");
-                }}
-              >
-                Sign in
-              </Button>
+              {user ? (
+                <Button
+                  className="w-full"
+                  variant="secondary"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    signOut();
+                  }}
+                >
+                  Sign out
+                </Button>
+              ) : (
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    navigate("/signin");
+                  }}
+                >
+                  Sign in
+                </Button>
+              )}
           </div>
         </div>
       )}
