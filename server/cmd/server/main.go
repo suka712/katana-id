@@ -36,7 +36,16 @@ func main() {
 	}
 
 	emailClient := resend.NewClient(os.Getenv("RESEND_API_KEY"))
-	authHandler := &auth.Handler{Queries: queries, EmailClient: emailClient}
+	authHandler := &auth.Handler{
+		Queries:            queries,
+		EmailClient:        emailClient,
+		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
+		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+		GitHubClientID:     os.Getenv("GITHUB_CLIENT_ID"),
+		GitHubClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
+		ServerURL:          os.Getenv("SERVER_URL"),
+		FrontendURL:        os.Getenv("FRONTEND_URL"),
+	}
 
 	checkHandler := &check.Handler{
 		Store:        check.NewStore(),
@@ -57,6 +66,10 @@ func main() {
 		r.Post("/verify-otp", authHandler.VerifyOTP)
 		r.Get("/me", authHandler.Me)
 		r.Post("/logout", authHandler.Logout)
+		r.Get("/google", authHandler.GoogleLogin)
+		r.Get("/google/callback", authHandler.GoogleCallback)
+		r.Get("/github", authHandler.GitHubLogin)
+		r.Get("/github/callback", authHandler.GitHubCallback)
 	})
 
 	r.Route("/check", func(r chi.Router) {

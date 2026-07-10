@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +16,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2, Pen, RotateCcw } from "lucide-react";
 import { OAuthButtons } from "@/components/signin/OAuthButtons";
 import { axiosInstance } from "@/lib/axios";
+import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
 
@@ -24,12 +25,19 @@ export const SignInForm = ({
   ...props
 }: React.ComponentProps<"form">) => {
   const navigate = useNavigate();
+  const { refetch } = useAuth();
   const [searchParams] = useSearchParams();
   const redirect = searchParams.get("redirect");
   const [step, setStep] = useState<"email" | "otp">("email");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("error") === "oauth_failed") {
+      toast.error("Sign-in failed. Please try again.");
+    }
+  }, [searchParams]);
 
   const sendOtp = async () => {
     setLoading(true);
@@ -60,6 +68,7 @@ export const SignInForm = ({
       setLoading(true);
       try {
         await axiosInstance.post("/auth/verify-otp", { Email: email, OTP: otp });
+        await refetch();
         navigate(redirect ?? "/");
       } catch (err) {
         const msg =
@@ -142,7 +151,7 @@ export const SignInForm = ({
 
         <FieldSeparator>Or with</FieldSeparator>
         <Field className="gap-3">
-          <OAuthButtons/>
+          <OAuthButtons redirect={redirect} />
         </Field>
       </FieldGroup>
     </form>
