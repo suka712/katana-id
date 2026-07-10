@@ -35,6 +35,35 @@ type meResponse struct {
 type Handler struct {
 	Queries     *gendb.Queries
 	EmailClient *resend.Client
+
+	GoogleClientID     string
+	GoogleClientSecret string
+	GitHubClientID     string
+	GitHubClientSecret string
+	ServerURL          string
+	FrontendURL        string
+}
+
+// createSessionCookie issues a new session for email and sets it as the "session" cookie.
+func (h *Handler) createSessionCookie(ctx context.Context, w http.ResponseWriter, email string) error {
+	session, err := h.Queries.CreateSession(ctx, gendb.CreateSessionParams{
+		Email:     email,
+		ExpiresAt: pgtype.Timestamptz{Time: time.Now().Add(7 * 24 * time.Hour), Valid: true},
+	})
+	if err != nil {
+		return err
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session",
+		Value:    session.Token.String(),
+		Path:     "/",
+		MaxAge:   7 * 24 * 60 * 60,
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+	})
+	return nil
 }
 
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
@@ -191,26 +220,10 @@ func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := h.Queries.CreateSession(ctx, gendb.CreateSessionParams{
-		Email:     req.Email,
-		ExpiresAt: pgtype.Timestamptz{Time: time.Now().Add(7 * 24 * time.Hour), Valid: true},
-	})
-	if err != nil {
+	if err := h.createSessionCookie(ctx, w, req.Email); err != nil {
 		util.WriteJSON(w, http.StatusInternalServerError, util.ErrorResponse{Error: "Something went wrong"})
 		return
 	}
-
-	token := session.Token.String()
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session",
-		Value:    token,
-		Path:     "/",
-		MaxAge:   7 * 24 * 60 * 60,
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
-	})
 
 	util.WriteJSON(w, http.StatusOK, successResponse{Message: "OTP verified"})
 }

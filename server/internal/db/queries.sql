@@ -21,10 +21,10 @@ SELECT * FROM otps WHERE email = $1 AND expires_at > NOW() ORDER BY expires_at D
 -- name: DeleteOTPsByEmail :exec
 DELETE FROM otps WHERE email = $1;
 
--- name: CreateProvider :one
+-- name: UpsertProvider :exec
 INSERT INTO providers (user_id, provider_name, provider_account_id)
 VALUES ($1, $2, $3)
-RETURNING *;
+ON CONFLICT (provider_name, provider_account_id) DO NOTHING;
 
 -- name: GetSession :one
 SELECT * FROM sessions WHERE token = $1 AND expires_at > NOW();
