@@ -1,8 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeftIcon, CheckIcon, XIcon, AlertTriangleIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  CheckIcon,
+  XIcon,
+  AlertTriangleIcon,
+  DownloadIcon,
+  ShieldCheckIcon,
+} from "lucide-react";
 import { axiosInstance } from "@/lib/axios";
+import { collectFingerprint } from "@/lib/fingerprint";
 import Logo from "@/components/Logo";
 import { QueryInput } from "@/components/ui/QueryInput";
 
@@ -10,15 +18,28 @@ import { QueryInput } from "@/components/ui/QueryInput";
 
 const DOMAIN_TLDS = ["com", "io", "dev", "co", "net", "org", "app", "ai", "xyz", "me"];
 
-const SOCIAL_PLATFORMS = [
-  { key: "github",  label: "GitHub" },
-  { key: "npm",     label: "npm"    },
-  { key: "reddit",  label: "Reddit" },
+const CODE_PLATFORMS = [
+  { key: "github", label: "GitHub" },
+  { key: "gitlab", label: "GitLab" },
+  { key: "npm", label: "npm" },
+  { key: "pypi", label: "PyPI" },
+  { key: "crates", label: "crates.io" },
+  { key: "rubygems", label: "RubyGems" },
+  { key: "dockerhub", label: "Docker Hub" },
+  { key: "homebrew", label: "Homebrew" },
+];
+
+const COMMUNITY_PLATFORMS = [
+  { key: "reddit", label: "Reddit" },
+  { key: "devto", label: "dev.to" },
+  { key: "keybase", label: "Keybase" },
+  { key: "x", label: "X" },
 ];
 
 const KNOWN_PLATFORMS = [
   ...DOMAIN_TLDS.map((t) => `domain.${t}`),
-  ...SOCIAL_PLATFORMS.map((s) => s.key),
+  ...CODE_PLATFORMS.map((s) => s.key),
+  ...COMMUNITY_PLATFORMS.map((s) => s.key),
 ];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -34,12 +55,39 @@ interface CellData {
 type ResultsMap = Record<string, Record<string, CellData | undefined>>;
 
 interface SSEPayload {
-  Name?: string;
-  Platform?: string;
-  Available?: boolean;
-  Meta?: Record<string, string> | null;
-  Err?: string;
+  name?: string;
+  platform?: string;
+  available?: boolean;
+  meta?: Record<string, string> | null;
+  err?: string;
   done?: boolean;
+}
+
+interface Color {
+  name: string;
+  hex: string;
+}
+
+interface Concept {
+  names: string[];
+  tagline: string;
+  mission: string;
+  palette: Color[];
+  keywords: string[];
+}
+
+interface Trust {
+  value: number;
+  level: string;
+  reasons: string[];
+}
+
+interface GenerateResponse {
+  id: string;
+  concept: Concept;
+  names: string[];
+  total: number;
+  trust: Trust;
 }
 
 type Status = "starting" | "streaming" | "done" | "error";
@@ -51,47 +99,60 @@ export default function ResultPage() {
   const navigate = useNavigate();
   const query = searchParams.get("q") ?? "";
 
-  const [status, setStatus]       = useState<Status>("starting");
-  const [errorMsg, setErrorMsg]   = useState("");
-  const [names, setNames]         = useState<string[]>([]);
-  const [results, setResults]     = useState<ResultsMap>({});
-  const [total, setTotal]         = useState(0);
+  const [status, setStatus] = useState<Status>("starting");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [kitId, setKitId] = useState("");
+  const [concept, setConcept] = useState<Concept | null>(null);
+  const [trust, setTrust] = useState<Trust | null>(null);
+  const [names, setNames] = useState<string[]>([]);
+  const [results, setResults] = useState<ResultsMap>({});
+  const [total, setTotal] = useState(0);
   const [completed, setCompleted] = useState(0);
-  const [elapsed, setElapsed]     = useState(0);
-  const [hasSearch, setHasSearch] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
 
-  const startRef  = useRef(0);
-  const timerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
-  const esRef     = useRef<EventSource | null>(null);
+  const startRef = useRef(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const esRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
-    if (!query) { navigate("/"); return; }
+    if (!query) {
+      navigate("/");
+      return;
+    }
 
-    // Reset all state for each new query
     setStatus("starting");
     setErrorMsg("");
+    setKitId("");
+    setConcept(null);
+    setTrust(null);
     setNames([]);
     setResults({});
     setTotal(0);
     setCompleted(0);
     setElapsed(0);
-    setHasSearch(false);
 
     const run = async () => {
       try {
-        const res = await axiosInstance.post<{
-          id: string; names: string[]; total: number;
-        }>("/check", { query });
+        const fp = await collectFingerprint();
 
-        const { id, names: checkNames, total: checkTotal } = res.data;
+        const res = await axiosInstance.post<GenerateResponse>("/generate", {
+          prompt: query,
+          fingerprint: fp.fingerprint,
+          components: fp.components,
+        });
 
-        setNames(checkNames);
-        setTotal(checkTotal);
+        const { id, concept, names, total, trust } = res.data;
+
+        setKitId(id);
+        setConcept(concept);
+        setTrust(trust);
+        setNames(names);
+        setTotal(total);
         setStatus("streaming");
 
-        // Pre-seed all known platforms as pending so pills appear immediately
+        // Pre-seed platforms as pending so pills appear immediately.
         const skeleton: ResultsMap = {};
-        for (const n of checkNames) {
+        for (const n of names) {
           skeleton[n] = Object.fromEntries(KNOWN_PLATFORMS.map((p) => [p, undefined]));
         }
         setResults(skeleton);
@@ -103,7 +164,7 @@ export default function ResultPage() {
         );
 
         const es = new EventSource(
-          `${import.meta.env.VITE_API_URL}/check/${id}`,
+          `${import.meta.env.VITE_API_URL}/generate/${id}/stream`,
           { withCredentials: true }
         );
         esRef.current = es;
@@ -119,18 +180,16 @@ export default function ResultPage() {
             return;
           }
 
-          const { Name, Platform, Available, Meta, Err } = payload;
-          if (!Name || !Platform) return;
+          const { name, platform, available, meta, err } = payload;
+          if (!name || !platform) return;
 
-          if (Platform === "search") setHasSearch(true);
-
-          const state: CellState = Err ? "error" : Available ? "available" : "taken";
+          const state: CellState = err ? "error" : available ? "available" : "taken";
 
           setResults((prev) => ({
             ...prev,
-            [Name]: {
-              ...(prev[Name] ?? {}),
-              [Platform]: { state, meta: Meta ?? undefined },
+            [name]: {
+              ...(prev[name] ?? {}),
+              [platform]: { state, meta: meta ?? undefined },
             },
           }));
           setCompleted((n) => n + 1);
@@ -145,7 +204,7 @@ export default function ResultPage() {
         if (err?.response?.status === 401) {
           navigate(
             `/signin?redirect=${encodeURIComponent(
-              window.location.pathname + window.location.search
+              `/result?q=${encodeURIComponent(query)}`
             )}`
           );
           return;
@@ -165,11 +224,9 @@ export default function ResultPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-
       {/* ── Header ── */}
       <header className="sticky top-0 z-40 border-b border-border/30 bg-background/80 backdrop-blur-md">
         <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between gap-6">
-          {/* Left: back + logo */}
           <div className="flex items-center gap-4">
             <Link
               to="/"
@@ -183,20 +240,20 @@ export default function ResultPage() {
             </div>
           </div>
 
-          {/* Right: status */}
-          <StatusDisplay
-            status={status}
-            completed={completed}
-            total={total}
-            elapsed={elapsed}
-          />
+          <div className="flex items-center gap-4">
+            {trust && <TrustBadge trust={trust} />}
+            <StatusDisplay
+              status={status}
+              completed={completed}
+              total={total}
+              elapsed={elapsed}
+            />
+          </div>
         </div>
       </header>
 
       {/* ── Body ── */}
       <main className="flex-1 flex flex-col items-center px-6 py-12 max-w-5xl mx-auto w-full">
-
-        {/* Search bar — springs in from above, mirroring where it just was */}
         <motion.div
           className="w-full mb-10"
           initial={{ opacity: 0, y: -20 }}
@@ -224,7 +281,7 @@ export default function ResultPage() {
             >
               <ScanningRing />
               <p className="text-sm text-muted-foreground/60 tracking-widest uppercase">
-                Initialising checks…
+                Generating brand…
               </p>
             </motion.div>
           )}
@@ -244,23 +301,132 @@ export default function ResultPage() {
           </motion.div>
         )}
 
+        {/* Concept */}
+        {concept && (
+          <ConceptHeader
+            concept={concept}
+            kitId={kitId}
+            canDownload={status === "done"}
+          />
+        )}
+
         {/* Name cards */}
         <div className="w-full flex flex-col gap-6">
           {names.map((name, i) => (
-            <NameCard
-              key={name}
-              name={name}
-              index={i}
-              cells={results[name] ?? {}}
-              status={status}
-              completed={completed}
-              total={total}
-              hasSearch={hasSearch}
-            />
+            <NameCard key={name} name={name} index={i} cells={results[name] ?? {}} />
           ))}
         </div>
       </main>
     </div>
+  );
+}
+
+// ─── Concept header ───────────────────────────────────────────────────────────
+
+function ConceptHeader({
+  concept,
+  kitId,
+  canDownload,
+}: {
+  concept: Concept;
+  kitId: string;
+  canDownload: boolean;
+}) {
+  return (
+    <motion.div
+      className="w-full mb-10 rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-8 md:p-10"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+    >
+      <div className="flex items-start justify-between gap-6 flex-wrap">
+        <div className="min-w-0">
+          <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/40 mb-2">
+            Brand Concept
+          </p>
+          {concept.tagline && (
+            <h1 className="font-heading text-3xl md:text-4xl leading-tight bg-linear-to-r from-violet-400 via-indigo-400 to-cyan-400 bg-clip-text text-transparent">
+              {concept.tagline}
+            </h1>
+          )}
+          {concept.mission && (
+            <p className="mt-3 text-sm text-muted-foreground/70 max-w-xl">
+              {concept.mission}
+            </p>
+          )}
+        </div>
+
+        <a
+          href={
+            canDownload
+              ? `${import.meta.env.VITE_API_URL}/kits/${kitId}/pdf`
+              : undefined
+          }
+          aria-disabled={!canDownload}
+          className={`shrink-0 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ring-1 transition-colors ${
+            canDownload
+              ? "bg-primary/10 text-primary ring-primary/30 hover:bg-primary/20"
+              : "bg-muted/20 text-muted-foreground/40 ring-white/5 pointer-events-none"
+          }`}
+        >
+          <DownloadIcon className="w-4 h-4" />
+          {canDownload ? "Download report" : "Preparing report…"}
+        </a>
+      </div>
+
+      {/* Palette */}
+      {concept.palette?.length > 0 && (
+        <div className="mt-8 flex flex-wrap gap-3">
+          {concept.palette.map((c) => (
+            <div key={c.hex} className="flex flex-col gap-1.5">
+              <div
+                className="w-16 h-16 rounded-xl ring-1 ring-white/10"
+                style={{ backgroundColor: c.hex }}
+              />
+              <span className="text-[10px] text-muted-foreground/60">{c.name}</span>
+              <span className="text-[10px] font-mono text-muted-foreground/40 uppercase">
+                {c.hex}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Keywords */}
+      {concept.keywords?.length > 0 && (
+        <div className="mt-6 flex flex-wrap gap-2">
+          {concept.keywords.map((k) => (
+            <span
+              key={k}
+              className="rounded-full bg-white/5 px-3 py-1 text-xs text-muted-foreground/70 ring-1 ring-white/5"
+            >
+              {k}
+            </span>
+          ))}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+// ─── Trust badge ──────────────────────────────────────────────────────────────
+
+function TrustBadge({ trust }: { trust: Trust }) {
+  const color =
+    trust.level === "high"
+      ? "text-cyan-400 ring-cyan-400/30 bg-cyan-500/10"
+      : trust.level === "medium"
+      ? "text-amber-400 ring-amber-400/30 bg-amber-500/10"
+      : "text-red-400 ring-red-400/30 bg-red-500/10";
+
+  return (
+    <span
+      title={trust.reasons.join(" · ")}
+      className={`hidden sm:inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-mono ring-1 ${color}`}
+    >
+      <ShieldCheckIcon className="w-3.5 h-3.5" />
+      trust {trust.value}
+    </span>
   );
 }
 
@@ -270,18 +436,10 @@ function NameCard({
   name,
   index,
   cells,
-  // status,
-  // completed,
-  total,
-  hasSearch,
 }: {
   name: string;
   index: number;
   cells: Record<string, CellData | undefined>;
-  status: Status;
-  completed: number;
-  total: number;
-  hasSearch: boolean;
 }) {
   const availableCount = Object.values(cells).filter(
     (c) => c?.state === "available"
@@ -290,7 +448,7 @@ function NameCard({
     (c) => c?.state !== undefined
   ).length;
 
-  const scoreRatio = total > 0 ? availableCount / total : 0;
+  const scoreRatio = resolvedCount > 0 ? availableCount / resolvedCount : 0;
   const scoreColor =
     scoreRatio > 0.66
       ? "text-cyan-400"
@@ -305,24 +463,19 @@ function NameCard({
       transition={{ duration: 0.5, delay: index * 0.08, ease: [0.16, 1, 0.3, 1] }}
     >
       <div className="relative rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm overflow-hidden">
-        {/* Top inset gradient line */}
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
 
         <div className="relative p-8 md:p-10">
-          {/* Name + score */}
           <div className="flex items-start justify-between gap-4 mb-8">
             <div>
               <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/40 mb-1">
                 Identity
               </p>
-              <h2
-                className="font-heading text-5xl md:text-6xl italic leading-none bg-linear-to-r from-violet-400 via-indigo-400 to-cyan-400 bg-clip-text text-transparent"
-              >
+              <h2 className="font-heading text-5xl md:text-6xl italic leading-none bg-linear-to-r from-violet-400 via-indigo-400 to-cyan-400 bg-clip-text text-transparent">
                 {name}
               </h2>
             </div>
 
-            {/* Score badge */}
             <div className="flex flex-col items-end gap-1 pt-1 shrink-0">
               <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/40">
                 Available
@@ -336,7 +489,6 @@ function NameCard({
             </div>
           </div>
 
-          {/* Divider */}
           <div className="w-full h-px bg-border/30 mb-8" />
 
           {/* Domains */}
@@ -346,43 +498,34 @@ function NameCard({
             </p>
             <div className="flex flex-wrap gap-2">
               {DOMAIN_TLDS.map((tld) => (
-                <LED
-                  key={tld}
-                  label={`.${tld}`}
-                  data={cells[`domain.${tld}`]}
-                />
+                <LED key={tld} label={`.${tld}`} data={cells[`domain.${tld}`]} />
               ))}
             </div>
           </section>
 
-          {/* Social & Code */}
-          <section className={hasSearch ? "mb-8" : ""}>
+          {/* Code & packages */}
+          <section className="mb-8">
             <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/40 mb-4">
-              Social & Code
+              Code & Packages
             </p>
             <div className="flex flex-wrap gap-3">
-              {SOCIAL_PLATFORMS.map((p) => (
+              {CODE_PLATFORMS.map((p) => (
                 <LED key={p.key} label={p.label} data={cells[p.key]} large />
               ))}
             </div>
           </section>
 
-          {/* Search presence */}
-          <AnimatePresence>
-            {hasSearch && cells["search"] && (
-              <motion.section
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                transition={{ duration: 0.4 }}
-              >
-                <div className="w-full h-px bg-border/30 mb-8" />
-                <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/40 mb-4">
-                  Search Presence
-                </p>
-                <SearchBar data={cells["search"]} />
-              </motion.section>
-            )}
-          </AnimatePresence>
+          {/* Community */}
+          <section>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/40 mb-4">
+              Community
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {COMMUNITY_PLATFORMS.map((p) => (
+                <LED key={p.key} label={p.label} data={cells[p.key]} large />
+              ))}
+            </div>
+          </section>
         </div>
       </div>
     </motion.div>
@@ -403,21 +546,17 @@ function LED({
   const state = data?.state;
 
   const styles: Record<string, string> = {
-    pending:
-      "bg-muted/20 text-muted-foreground/25 ring-1 ring-white/5",
-    available:
-      "bg-cyan-500/10 text-cyan-300 ring-1 ring-cyan-400/30",
-    taken:
-      "bg-red-950/30 text-red-400/50 ring-1 ring-red-900/40",
-    error:
-      "bg-amber-950/20 text-amber-500/50 ring-1 ring-amber-800/20",
+    pending: "bg-muted/20 text-muted-foreground/25 ring-1 ring-white/5",
+    available: "bg-cyan-500/10 text-cyan-300 ring-1 ring-cyan-400/30",
+    taken: "bg-red-950/30 text-red-400/50 ring-1 ring-red-900/40",
+    error: "bg-amber-950/20 text-amber-500/50 ring-1 ring-amber-800/20",
   };
 
   const dotStyles: Record<string, string> = {
-    pending:   "bg-white/10 animate-pulse",
+    pending: "bg-white/10 animate-pulse",
     available: "bg-cyan-400 shadow-[0_0_6px_1px_oklch(75%_0.18_195/0.8)]",
-    taken:     "bg-red-500/50",
-    error:     "bg-amber-500/50",
+    taken: "bg-red-500/50",
+    error: "bg-amber-500/50",
   };
 
   const resolvedState = state ?? "pending";
@@ -428,10 +567,7 @@ function LED({
       initial={false}
       animate={
         state && state !== "pending"
-          ? {
-              scale: [1, 1.08, 1],
-              transition: { duration: 0.3, ease: "easeOut" },
-            }
+          ? { scale: [1, 1.08, 1], transition: { duration: 0.3, ease: "easeOut" } }
           : {}
       }
       className={`
@@ -454,49 +590,11 @@ function LED({
         <XIcon className={`shrink-0 text-red-400/40 ${large ? "w-3.5 h-3.5" : "w-3 h-3"}`} />
       )}
       {state === "error" && (
-        <AlertTriangleIcon className={`shrink-0 text-amber-400/50 ${large ? "w-3.5 h-3.5" : "w-3 h-3"}`} />
+        <AlertTriangleIcon
+          className={`shrink-0 text-amber-400/50 ${large ? "w-3.5 h-3.5" : "w-3 h-3"}`}
+        />
       )}
     </motion.div>
-  );
-}
-
-// ─── Search bar ───────────────────────────────────────────────────────────────
-
-function SearchBar({ data }: { data: CellData | undefined }) {
-  const score = data?.meta?.competitiveness ?? "unknown";
-  const totalResults = data?.meta?.total_results;
-
-  const fillMap: Record<string, number>   = { low: 0.25, medium: 0.6, high: 0.92 };
-  const colorMap: Record<string, string>  = {
-    low:    "from-cyan-500 to-cyan-400",
-    medium: "from-amber-500 to-amber-400",
-    high:   "from-red-600 to-red-500",
-  };
-  const labelMap: Record<string, string> = {
-    low:    "Low competition",
-    medium: "Moderate competition",
-    high:   "High competition",
-  };
-
-  const fill  = fillMap[score]  ?? 0;
-  const color = colorMap[score] ?? "from-muted to-muted";
-  const label = labelMap[score] ?? "Unknown";
-
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between text-xs text-muted-foreground/50 font-mono">
-        <span>{label}</span>
-        {totalResults && <span>{Number(totalResults).toLocaleString()} results</span>}
-      </div>
-      <div className="h-1.5 w-full rounded-full bg-muted/20 overflow-hidden">
-        <motion.div
-          className={`h-full rounded-full bg-gradient-to-r ${color}`}
-          initial={{ width: "0%" }}
-          animate={{ width: `${fill * 100}%` }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        />
-      </div>
-    </div>
   );
 }
 
@@ -517,7 +615,7 @@ function StatusDisplay({
     return (
       <span className="flex items-center gap-2 text-xs text-muted-foreground/50 font-mono uppercase tracking-widest">
         <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" />
-        Initialising
+        Generating
       </span>
     );
   }
@@ -542,8 +640,7 @@ function StatusDisplay({
           <CheckIcon className="w-2.5 h-2.5 text-cyan-400" />
         </span>
         <span className="text-muted-foreground/60">
-          <span className="text-foreground/80 tabular-nums">{completed}</span>
-          {" "}checks
+          <span className="text-foreground/80 tabular-nums">{completed}</span> checks
         </span>
         <span className="text-muted-foreground/20">·</span>
         <span className="text-foreground/60 tabular-nums">{(elapsed / 1000).toFixed(1)}s</span>
@@ -558,9 +655,7 @@ function StatusDisplay({
 function ScanningRing() {
   return (
     <div className="relative w-14 h-14">
-      {/* Static ring */}
       <div className="absolute inset-0 rounded-full border border-border/30" />
-      {/* Spinning arc */}
       <motion.div
         className="absolute inset-0 rounded-full border-2 border-transparent"
         style={{
@@ -570,7 +665,6 @@ function ScanningRing() {
         animate={{ rotate: 360 }}
         transition={{ repeat: Infinity, duration: 1.2, ease: "linear" }}
       />
-      {/* Center dot */}
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" />
       </div>
