@@ -15,8 +15,10 @@ import (
 	"github.com/resend/resend-go/v3"
 
 	"github.com/trnahnh/katana-id/internal/auth"
+	"github.com/trnahnh/katana-id/internal/brand"
 	"github.com/trnahnh/katana-id/internal/check"
 	"github.com/trnahnh/katana-id/internal/db"
+	"github.com/trnahnh/katana-id/internal/gemini"
 	"github.com/trnahnh/katana-id/internal/health"
 	"github.com/trnahnh/katana-id/util"
 )
@@ -48,11 +50,25 @@ func main() {
 		SecureCookies: strings.HasPrefix(serverURL, "https"),
 	}
 
-	checkHandler := &check.Handler{
-		Store:        check.NewStore(),
-		GitHubToken:  os.Getenv("GITHUB_TOKEN"),
-		BraveAPIKey:  os.Getenv("BRAVE_API_KEY"),
-		TwitterToken: os.Getenv("TWITTER_BEARER_TOKEN"),
+	// Gemini is optional: when the key is absent or the client fails to build,
+	// the brand handler falls back to a local name generator.
+	var geminiClient *gemini.Client
+	if gc, err := gemini.New(ctx, os.Getenv("GEMINI_API_KEY"), os.Getenv("GEMINI_MODEL")); err != nil {
+		log.Print("⚠️  Gemini disabled: ", err)
+	} else {
+		geminiClient = gc
+		log.Print("✨ Gemini brand generation enabled")
+	}
+
+	brandHandler := &brand.Handler{
+		DB:     client,
+		Gemini: geminiClient,
+		Store:  check.NewStore(),
+		CheckOpts: check.Options{
+			GitHubToken:  os.Getenv("GITHUB_TOKEN"),
+			BraveAPIKey:  os.Getenv("BRAVE_API_KEY"),
+			TwitterToken: os.Getenv("TWITTER_BEARER_TOKEN"),
+		},
 	}
 
 	r := chi.NewRouter()
@@ -73,10 +89,15 @@ func main() {
 		r.Get("/github/callback", authHandler.GitHubCallback)
 	})
 
-	r.Route("/check", func(r chi.Router) {
+	r.Route("/generate", func(r chi.Router) {
 		r.Use(authHandler.RequireAuth)
-		r.Post("/", checkHandler.Check)
-		r.Get("/{id}", checkHandler.Stream)
+		r.Post("/", brandHandler.Generate)
+		r.Get("/{id}/stream", brandHandler.Stream)
+	})
+
+	r.Route("/kits", func(r chi.Router) {
+		r.Use(authHandler.RequireAuth)
+		r.Get("/{id}/pdf", brandHandler.PDF)
 	})
 
 	port := os.Getenv("PORT")
