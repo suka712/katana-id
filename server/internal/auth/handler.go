@@ -3,17 +3,17 @@ package auth
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"regexp"
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/resend/resend-go/v3"
-	"github.com/trnahnh/katana-id/internal/db/generated"
+
+	"github.com/trnahnh/katana-id/internal/db/ent"
+	"github.com/trnahnh/katana-id/internal/db/ent/otp"
+	"github.com/trnahnh/katana-id/internal/db/ent/session"
+	"github.com/trnahnh/katana-id/internal/db/ent/user"
 	"github.com/trnahnh/katana-id/util"
 )
 
@@ -28,12 +28,12 @@ type successResponse struct {
 }
 
 type meResponse struct {
-	Email string `json:"email"`
+	Email    string `json:"email"`
 	Username string `json:"username"`
 }
 
 type Handler struct {
-	Queries     *gendb.Queries
+	DB          *ent.Client
 	EmailClient *resend.Client
 
 	GoogleClientID     string
@@ -42,87 +42,78 @@ type Handler struct {
 	GitHubClientSecret string
 	ServerURL          string
 	FrontendURL        string
+
+	// SecureCookies gates the Secure flag on auth cookies. It must be false in
+	// local http dev (browsers drop Secure cookies over http://localhost, which
+	// silently breaks the OAuth state round-trip) and true in https production.
+	SecureCookies bool
 }
+
+const sessionCookie = "session"
 
 // createSessionCookie issues a new session for email and sets it as the "session" cookie.
 func (h *Handler) createSessionCookie(ctx context.Context, w http.ResponseWriter, email string) error {
-	session, err := h.Queries.CreateSession(ctx, gendb.CreateSessionParams{
-		Email:     email,
-		ExpiresAt: pgtype.Timestamptz{Time: time.Now().Add(7 * 24 * time.Hour), Valid: true},
-	})
+	sess, err := h.DB.Session.Create().
+		SetEmail(email).
+		SetExpiresAt(time.Now().Add(7 * 24 * time.Hour)).
+		Save(ctx)
 	if err != nil {
 		return err
 	}
 
 	http.SetCookie(w, &http.Cookie{
-		Name:     "session",
-		Value:    session.Token.String(),
+		Name:     sessionCookie,
+		Value:    sess.Token,
 		Path:     "/",
 		MaxAge:   7 * 24 * 60 * 60,
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   h.SecureCookies,
 		SameSite: http.SameSiteLaxMode,
 	})
 	return nil
 }
 
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("session")
-	if err != nil {
-		util.WriteJSON(w, http.StatusUnauthorized, util.ErrorResponse{Error: "Unauthorized"})
-		return
-	}
-
-	token, err := uuid.Parse(cookie.Value)
+	cookie, err := r.Cookie(sessionCookie)
 	if err != nil {
 		util.WriteJSON(w, http.StatusUnauthorized, util.ErrorResponse{Error: "Unauthorized"})
 		return
 	}
 
 	ctx := r.Context()
-	session, err := h.Queries.GetSession(ctx, pgtype.UUID{
-		Bytes: token,
-		Valid: true,
-	})
+	sess, err := h.DB.Session.Query().
+		Where(session.Token(cookie.Value), session.ExpiresAtGT(time.Now())).
+		Only(ctx)
 	if err != nil {
 		util.WriteJSON(w, http.StatusUnauthorized, util.ErrorResponse{Error: "Unauthorized"})
 		return
 	}
 
-	email := session.Email
-	user, err := h.Queries.GetUserByEmail(ctx, email)
+	u, err := h.DB.User.Query().Where(user.Email(sess.Email)).Only(ctx)
 	if err != nil {
 		util.WriteJSON(w, http.StatusUnauthorized, util.ErrorResponse{Error: "Unauthorized"})
 		return
 	}
 
 	util.WriteJSON(w, http.StatusOK, meResponse{
-		Email: email,
-		Username: user.Username, 
+		Email:    u.Email,
+		Username: u.Username,
 	})
 }
 
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
-	cookie, _ := r.Cookie("session")
-	id, _ := uuid.Parse(cookie.Value)
-	
-	token := pgtype.UUID{
-		Valid: true,
-		Bytes: id,
+	if cookie, err := r.Cookie(sessionCookie); err == nil && cookie.Value != "" {
+		h.DB.Session.Delete().Where(session.Token(cookie.Value)).Exec(r.Context())
 	}
-	ctx := r.Context()
-	h.Queries.DeleteSessionByToken(ctx, token)
-	
+
 	http.SetCookie(w, &http.Cookie{
-		Name:     "session",
-		Value:    "",
-		Path:     "/",
-		MaxAge:   -1,
+		Name:   sessionCookie,
+		Value:  "",
+		Path:   "/",
+		MaxAge: -1,
 	})
 
-	util.WriteJSON(w, http.StatusOK, successResponse{
-		Message: "Logged out",
-	})
+	util.WriteJSON(w, http.StatusOK, successResponse{Message: "Logged out"})
 }
 
 func (h *Handler) SendOTP(w http.ResponseWriter, r *http.Request) {
@@ -137,27 +128,23 @@ func (h *Handler) SendOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	otp, err := genOTP()
+	code, err := genOTP()
 	if err != nil {
 		util.WriteJSON(w, http.StatusInternalServerError, util.ErrorResponse{Error: "Something went wrong"})
 		return
 	}
 
-  expires := pgtype.Timestamptz{
-    Time: time.Now().Add(5 * time.Minute),
-    Valid: true,
-  }
-
-	if err := h.Queries.CreateOTP(context.Background(), gendb.CreateOTPParams{
-		Email: req.Email,
-		Otp:   otp,
-    ExpiresAt: expires,
-	}); err != nil {
+	ctx := r.Context()
+	if _, err := h.DB.OTP.Create().
+		SetEmail(req.Email).
+		SetCode(code).
+		SetExpiresAt(time.Now().Add(5 * time.Minute)).
+		Save(ctx); err != nil {
 		util.WriteJSON(w, http.StatusInternalServerError, util.ErrorResponse{Error: "Something went wrong"})
-    return
+		return
 	}
 
-	if err := sendOTP(h.EmailClient, req.Email, otp); err != nil {
+	if err := sendOTP(h.EmailClient, req.Email, code); err != nil {
 		util.WriteJSON(w, http.StatusInternalServerError, util.ErrorResponse{Error: "Something went wrong"})
 		return
 	}
@@ -182,10 +169,13 @@ func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := context.Background()
+	ctx := r.Context()
 
-	otpRow, err := h.Queries.GetOTPByEmail(ctx, req.Email)
-	if errors.Is(err, pgx.ErrNoRows) {
+	otpRow, err := h.DB.OTP.Query().
+		Where(otp.Email(req.Email), otp.ExpiresAtGT(time.Now())).
+		Order(ent.Desc(otp.FieldExpiresAt)).
+		First(ctx)
+	if ent.IsNotFound(err) {
 		util.WriteJSON(w, http.StatusUnauthorized, util.ErrorResponse{Error: "Invalid or expired OTP"})
 		return
 	}
@@ -194,28 +184,17 @@ func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if otpRow.Otp != req.OTP {
+	if otpRow.Code != req.OTP {
 		util.WriteJSON(w, http.StatusUnauthorized, util.ErrorResponse{Error: "Invalid or expired OTP"})
 		return
 	}
 
-	if err := h.Queries.DeleteOTPsByEmail(ctx, req.Email); err != nil {
+	if _, err := h.DB.OTP.Delete().Where(otp.Email(req.Email)).Exec(ctx); err != nil {
 		util.WriteJSON(w, http.StatusInternalServerError, util.ErrorResponse{Error: "Something went wrong"})
 		return
 	}
 
-	_, err = h.Queries.GetUserByEmail(ctx, req.Email)
-	if errors.Is(err, pgx.ErrNoRows) {
-		username := strings.Split(req.Email, "@")[0]
-		_, err = h.Queries.CreateUser(ctx, gendb.CreateUserParams{
-			Username: username,
-			Email:    req.Email,
-		})
-		if err != nil {
-			util.WriteJSON(w, http.StatusInternalServerError, util.ErrorResponse{Error: "Something went wrong"})
-			return
-		}
-	} else if err != nil {
+	if err := h.ensureUser(ctx, req.Email); err != nil {
 		util.WriteJSON(w, http.StatusInternalServerError, util.ErrorResponse{Error: "Something went wrong"})
 		return
 	}
@@ -226,4 +205,19 @@ func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	util.WriteJSON(w, http.StatusOK, successResponse{Message: "OTP verified"})
+}
+
+// ensureUser creates an account for email if one does not already exist,
+// deriving the username from the local part of the address.
+func (h *Handler) ensureUser(ctx context.Context, email string) error {
+	exists, err := h.DB.User.Query().Where(user.Email(email)).Exist(ctx)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
+	username := strings.Split(email, "@")[0]
+	_, err = h.DB.User.Create().SetUsername(username).SetEmail(email).Save(ctx)
+	return err
 }

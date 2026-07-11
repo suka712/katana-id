@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -25,26 +26,26 @@ func main() {
 	util.RequireEnvs()
 
 	ctx := context.Background()
-	queries, pool, err := db.Connect(ctx, os.Getenv("DB_URL"))
+	client, err := db.Connect(ctx, os.Getenv("DB_URL"))
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer pool.Close()
+	defer client.Close()
 
-	if err := db.RunMigrations(os.Getenv("DB_URL")); err != nil {
-		log.Fatal("Failed to run migration: ", err)
-	}
-
+	serverURL := os.Getenv("SERVER_URL")
 	emailClient := resend.NewClient(os.Getenv("RESEND_API_KEY"))
 	authHandler := &auth.Handler{
-		Queries:            queries,
+		DB:                 client,
 		EmailClient:        emailClient,
 		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
 		GitHubClientID:     os.Getenv("GITHUB_CLIENT_ID"),
 		GitHubClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
-		ServerURL:          os.Getenv("SERVER_URL"),
+		ServerURL:          serverURL,
 		FrontendURL:        os.Getenv("FRONTEND_URL"),
+		// Browsers refuse Secure cookies over http://localhost, so only set the
+		// flag when the server is actually served over https.
+		SecureCookies: strings.HasPrefix(serverURL, "https"),
 	}
 
 	checkHandler := &check.Handler{

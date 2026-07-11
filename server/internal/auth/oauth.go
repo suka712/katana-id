@@ -5,14 +5,13 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/trnahnh/katana-id/internal/db/generated"
+	"github.com/trnahnh/katana-id/internal/db/ent/provider"
+	"github.com/trnahnh/katana-id/internal/db/ent/user"
 )
 
 const (
@@ -36,7 +35,7 @@ func (h *Handler) beginOAuth(w http.ResponseWriter, r *http.Request, authEndpoin
 		Path:     "/",
 		MaxAge:   10 * 60,
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   h.SecureCookies,
 		SameSite: http.SameSiteLaxMode,
 	})
 
@@ -47,7 +46,7 @@ func (h *Handler) beginOAuth(w http.ResponseWriter, r *http.Request, authEndpoin
 			Path:     "/",
 			MaxAge:   10 * 60,
 			HttpOnly: true,
-			Secure:   true,
+			Secure:   h.SecureCookies,
 			SameSite: http.SameSiteLaxMode,
 		})
 	}
@@ -94,22 +93,34 @@ func randomToken() (string, error) {
 // resolveUserAndLinkProvider ensures a user exists for email and records the
 // provider link, matching identity the same way the OTP flow does (by email).
 func (h *Handler) resolveUserAndLinkProvider(ctx context.Context, providerName, providerAccountID, email string) error {
-	user, err := h.Queries.GetUserByEmail(ctx, email)
-	if errors.Is(err, pgx.ErrNoRows) {
-		username := strings.Split(email, "@")[0]
-		user, err = h.Queries.CreateUser(ctx, gendb.CreateUserParams{Username: username, Email: email})
-		if err != nil {
-			return err
-		}
-	} else if err != nil {
+	if err := h.ensureUser(ctx, email); err != nil {
 		return err
 	}
 
-	return h.Queries.UpsertProvider(ctx, gendb.UpsertProviderParams{
-		UserID:            user.ID,
-		ProviderName:      providerName,
-		ProviderAccountID: providerAccountID,
-	})
+	u, err := h.DB.User.Query().Where(user.Email(email)).Only(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Link the external identity once; ignore if it already exists.
+	exists, err := h.DB.Provider.Query().
+		Where(
+			provider.ProviderName(providerName),
+			provider.ProviderAccountID(providerAccountID),
+		).
+		Exist(ctx)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
+
+	return h.DB.Provider.Create().
+		SetUserID(u.ID).
+		SetProviderName(providerName).
+		SetProviderAccountID(providerAccountID).
+		Exec(ctx)
 }
 
 // ─── Google ─────────────────────────────────────────────────────────────────
