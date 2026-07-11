@@ -16,6 +16,16 @@ const (
 	X         Platform = "x"
 	Instagram Platform = "instagram"
 	TikTok    Platform = "tiktok"
+
+	PyPI      Platform = "pypi"
+	RubyGems  Platform = "rubygems"
+	Crates    Platform = "crates"
+	DockerHub Platform = "dockerhub"
+	Homebrew  Platform = "homebrew"
+	DevTo     Platform = "devto"
+	GitLab    Platform = "gitlab"
+	Keybase   Platform = "keybase"
+	Search    Platform = "search"
 )
 
 func DomainPlatform(tld string) Platform {
